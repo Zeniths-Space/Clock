@@ -3,10 +3,9 @@
 A private, offline Android clock. Part of the Zenith's Space app collection.
 Application ID `com.elara.clock`.
 
-**Status:** alarms work: they are saved, ring on time over the lock screen, snooze and survive a restart.
-Adding an alarm is a plain time picker for now (a one-time alarm); the full add/edit sheet (days,
-name, vibration) comes next. The timer and stopwatch still count only while the app is open and do
-not alert yet.
+**Status:** alarms work: they are saved, ring on time over the lock screen, snooze and survive a restart,
+and are added and edited in a sheet. The timer and stopwatch still count only while the app is open and
+do not alert yet.
 
 ## Alarms
 
@@ -21,6 +20,13 @@ not alert yet.
 - Alarms are set again after a restart (also before the phone is first unlocked: they are kept in
   device-protected storage), after an update, after a time or time-zone change, and whenever the app's
   process starts (One UI does not always deliver the update broadcast).
+- Adding or editing: tap + (or an alarm) for a sheet laid out like Samsung's alarm editor in the Elara form
+  design: hour, minute and AM/PM wheels, the next ring date ("Tomorrow · Tue, 10 Nov"), day circles
+  (Sunday first; none chosen rings once), a name, and Sound, Vibration and Snooze switches; Delete when
+  editing; Cancel and Save at the bottom. Its header shows how long until it rings. It does not drag;
+  closing it with changes asks first. Sound off rings silently (vibration and the screen); Snooze off
+  leaves only Dismiss.
+- With no alarms: a glass clock, Add alarm, and one-tap alarms for 6:00, 7:00 or a 20-minute nap.
 - The Alarms screen warns, with a Fix button, if notifications are off (alarms could not ring), if
   exact alarms are not allowed, or if full-screen alarms are not allowed.
 - Limitation: like every Android app, after a force stop from App info the app gets no broadcasts until
