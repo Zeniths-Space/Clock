@@ -9,11 +9,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.net.toUri
@@ -40,12 +35,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -70,6 +70,9 @@ import java.time.ZonedDateTime
 
 private val HeroDigits = sans(112, weight = 600, spacing = -6f)
 
+/** [AlarmSheet] open for a new alarm. */
+private const val NewAlarm = -1
+
 /** Why alarms might not ring, with where to fix it. */
 private enum class RingProblem(val text: Int) { NOTIFICATIONS(R.string.warn_notifications), EXACT(R.string.warn_exact), FULL_SCREEN(R.string.warn_full_screen) }
 
@@ -84,7 +87,8 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
     val alarms by remember { AlarmEngine.alarms(context) }.collectAsState()
     val here = now.atZone(zone)
     val next = AlarmEngine.next(alarms, here)
-    var picking by rememberSaveable { mutableStateOf(false) }
+    // The alarm open in the sheet: its id, NewAlarm for a new one, null when the sheet is closed.
+    var sheet by rememberSaveable { mutableStateOf<Int?>(null) }
 
     // What could stop alarms ringing, checked again each time the screen comes back (say, from Settings).
     var checks by remember { mutableIntStateOf(0) }
@@ -124,12 +128,17 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
                 FormatSwitch(use24) { twentyFour = it }
             }
             problem?.let { WarningCard(it) { context.openFix(it) } }
-            if (alarms.isEmpty()) EmptyCard()
+            if (alarms.isEmpty()) {
+                EmptyState(use24, onAdd = { sheet = NewAlarm }) { quick ->
+                    AlarmEngine.save(context, quick.copy(id = AlarmEngine.newId(context)))
+                    ensureCanRing()
+                }
+            }
             next?.let { (alarm, at) -> NextAlarmCard(alarm, at, here, use24) }
             alarms.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     pair.forEach { alarm ->
-                        AlarmTile(alarm, hero = next?.first?.id == alarm.id, use24, Modifier.weight(1f)) { on ->
+                        AlarmTile(alarm, hero = next?.first?.id == alarm.id, use24, Modifier.weight(1f), onOpen = { sheet = alarm.id }) { on ->
                             if (on) ensureCanRing()
                             AlarmEngine.setOn(context, alarm.id, on)
                         }
@@ -139,7 +148,8 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
             }
         }
         val addLabel = stringResource(R.string.add_alarm)
-        Box(
+        // The empty state has its own Add button; the floating one is for adding more.
+        if (alarms.isNotEmpty()) Box(
             Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
@@ -148,28 +158,109 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
                 .shadow(14.dp, CircleShape, ambientColor = Ink.purpleDeep.copy(alpha = 0.35f), spotColor = Ink.purpleDeep.copy(alpha = 0.45f))
                 .background(PurpleRamp, CircleShape)
                 .clip(CircleShape)
-                .clickable(role = Role.Button, onClickLabel = addLabel) { picking = true }
+                .clickable(role = Role.Button, onClickLabel = addLabel) { sheet = NewAlarm }
                 .semantics { contentDescription = addLabel },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Plus, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
     }
 
-    // shortcut: a plain time picker adds a one-time alarm; the full add/edit sheet (days, label, vibration) replaces it.
-    if (picking) {
-        TimePickDialog(use24, onDismiss = { picking = false }) { time ->
-            picking = false
-            AlarmEngine.save(context, Alarm(id = AlarmEngine.newId(context), time = time))
-            ensureCanRing()
+    sheet?.let { open ->
+        val editing = alarms.firstOrNull { it.id == open }
+        // An alarm deleted elsewhere while open (it rang once and was removed): nothing left to edit.
+        if (open != NewAlarm && editing == null) {
+            SideEffect { sheet = null }
+            return@let
         }
+        AlarmSheet(
+            editing = editing,
+            twentyFour = use24,
+            onSave = { alarm ->
+                AlarmEngine.save(context, if (editing == null) alarm.copy(id = AlarmEngine.newId(context)) else alarm)
+                ensureCanRing()
+                sheet = null
+            },
+            onDelete = {
+                editing?.let { AlarmEngine.delete(context, it.id) }
+                sheet = null
+            },
+            onClose = { sheet = null },
+        )
     }
 }
 
+/**
+ * No alarms yet: a glass clock with a soft purple glow, a short line, Add alarm, and a few one-tap alarms
+ * (6:00, 7:00, or a nap from now).
+ */
 @Composable
-private fun EmptyCard() {
-    val shape = RoundedCornerShape(32.dp)
-    Column(Modifier.fillMaxWidth().glass(shape, elevation = 12.dp).padding(24.dp)) {
-        Text(stringResource(R.string.no_alarms), style = sans(20, 500))
-        Text(stringResource(R.string.no_alarms_sub), style = sans(14, color = Ink.muted), modifier = Modifier.padding(top = 6.dp))
+private fun EmptyState(twentyFour: Boolean, onAdd: () -> Unit, onQuick: (Alarm) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(232.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(Brush.radialGradient(listOf(Ink.purple.copy(alpha = if (Ink.dark) 0.35f else 0.28f), Color.Transparent)), size.minDimension / 2)
+            }
+            Box(Modifier.size(176.dp).glass(CircleShape, alpha = 0.7f, elevation = 18.dp))
+            Canvas(Modifier.size(176.dp).clearAndSetSemantics {}) {
+                val c = center
+                val r = size.minDimension / 2
+                for (i in 0 until 12) {
+                    val major = i % 3 == 0
+                    val a = Math.toRadians(i * 30.0)
+                    val outer = r * 0.84f
+                    val inner = outer - (if (major) 14.dp else 7.dp).toPx()
+                    val dir = Offset(kotlin.math.sin(a).toFloat(), -kotlin.math.cos(a).toFloat())
+                    drawLine(if (major) Ink.lilac else Ink.lilac.copy(alpha = 0.5f), c + dir * inner, c + dir * outer, (if (major) 4.dp else 2.5.dp).toPx(), StrokeCap.Round)
+                }
+                // Seven o'clock: hour hand towards 7, minute hand on 12.
+                val hour = Math.toRadians(210.0)
+                drawLine(PurpleRamp, c, c + Offset(kotlin.math.sin(hour).toFloat(), -kotlin.math.cos(hour).toFloat()) * (r * 0.42f), 7.dp.toPx(), StrokeCap.Round)
+                drawLine(Ink.text, c, c + Offset(0f, -r * 0.62f), 4.5.dp.toPx(), StrokeCap.Round)
+                drawCircle(Ink.purple, 8.dp.toPx(), c)
+                drawCircle(Color.White, 3.dp.toPx(), c)
+            }
+        }
+        Text(stringResource(R.string.empty_title), style = sans(28, 500), modifier = Modifier.padding(top = 18.dp))
+        Text(
+            stringResource(R.string.empty_sub),
+            style = sans(15, color = Ink.muted),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp),
+        )
+        val shape = RoundedCornerShape(30.dp)
+        Row(
+            Modifier
+                .padding(top = 24.dp)
+                .height(56.dp)
+                .shadow(14.dp, shape, ambientColor = Ink.purpleDeep.copy(alpha = 0.32f), spotColor = Ink.purpleDeep.copy(alpha = 0.42f))
+                .background(PurpleRamp, shape)
+                .clip(shape)
+                .clickable(role = Role.Button, onClick = onAdd)
+                .padding(horizontal = 32.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Plus, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(stringResource(R.string.add_alarm), style = sans(17, 500, Color.White))
+        }
+        Text(stringResource(R.string.quick_add), style = smallText(11), modifier = Modifier.padding(top = 30.dp, bottom = 10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val nap = 20L
+            listOf(
+                Alarm(0, LocalTime.of(6, 0)) to if (twentyFour) "06:00" else "6:00 am",
+                Alarm(0, LocalTime.of(7, 0)) to if (twentyFour) "07:00" else "7:00 am",
+                Alarm(0, LocalTime.now().plusMinutes(nap).withSecond(0).withNano(0), label = stringResource(R.string.nap_minutes, nap)) to stringResource(R.string.nap_minutes, nap),
+            ).forEach { (alarm, text) ->
+                Text(
+                    text,
+                    style = sans(14, 500),
+                    modifier = Modifier
+                        .glass(RoundedCornerShape(20.dp), elevation = 6.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable(role = Role.Button) { onQuick(alarm) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
+        }
     }
 }
 
@@ -200,21 +291,6 @@ private fun Context.openFix(problem: RingProblem) {
     runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePickDialog(twentyFour: Boolean, onDismiss: () -> Unit, onPick: (LocalTime) -> Unit) {
-    // Starts at the next minute, so a quick alarm is one tap away.
-    val start = remember { LocalTime.now().plusMinutes(1) }
-    val state = rememberTimePickerState(initialHour = start.hour, initialMinute = start.minute, is24Hour = twentyFour)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = if (Ink.dark) Color(0xFF141414) else Color.White,
-        title = { Text(stringResource(R.string.add_alarm), style = sans(20, 500)) },
-        text = { TimePicker(state) },
-        confirmButton = { TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }) { Text(stringResource(R.string.save), style = sans(15, 500, Ink.accent)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), style = sans(15, 500, Ink.muted)) } },
-    )
-}
 
 /** 12h / 24h, a small glass segmented switch; the chosen half dark. */
 @Composable
@@ -297,7 +373,7 @@ private fun NightLine(nowLabel: String, endLabel: String) {
 }
 
 @Composable
-private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier: Modifier, onToggle: (Boolean) -> Unit) {
+private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier: Modifier, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val shape = RoundedCornerShape(26.dp)
     val fg = when {
         hero -> Color.White
@@ -314,6 +390,8 @@ private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier
                     .background(PurpleRamp, shape)
                 else Modifier.glass(shape, alpha = if (alarm.on) 0.6f else 0.3f, elevation = 8.dp),
             )
+            .clip(shape)
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.edit_alarm), onClick = onOpen)
             .padding(start = 16.dp, end = 14.dp, top = 14.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {

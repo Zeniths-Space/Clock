@@ -48,11 +48,12 @@ fun utcLabel(zone: ZoneId, at: Instant): String {
 fun offsetBetween(home: ZoneId, other: ZoneId, at: Instant): Duration =
     Duration.ofSeconds((other.rules.getOffset(at).totalSeconds - home.rules.getOffset(at).totalSeconds).toLong())
 
-/** "5 h 45 min", "3 h", "45 min" for a positive or negative [d]. */
+/** "5 h 45 min", "3 h", "45 min" for a positive or negative [d]; a day or more is "6 d 7 h". */
 fun spanText(d: Duration): String {
     val total = abs(d.toMinutes())
     val h = total / 60
     val m = total % 60
+    if (h >= 24) return if (h % 24 == 0L) "${h / 24} d" else "${h / 24} d ${h % 24} h"
     return when {
         h == 0L -> "$m min"
         m == 0L -> "$h h"

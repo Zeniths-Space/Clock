@@ -43,6 +43,7 @@ object Icons {
     val Chevron = line("chevron", 2f, "m6 9 6 6 6-6")
     val Calendar = line("calendar", 2f, "M7 5h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3zM4 10h16M9 3v4M15 3v4")
     val Sun = line("sun", 2f, circle(12f, 12f, 4f), "M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4")
+    val Close = line("close", 2f, "M6 6l12 12M18 6 6 18")
     val Flag = line("flag", 2f, "M5 21V4M5 4h11l-2 4 2 4H5")
     val Pause = filled("pause", "M7 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM14 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z")
     val Play = filled("play", "M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z")

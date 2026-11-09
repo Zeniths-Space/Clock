@@ -97,6 +97,8 @@ class ClockLogicTest {
         assertEquals("5 h 45 min", spanText(offsetBetween(ktm, ZoneId.of("Europe/London"), at)))
         assertTrue(offsetBetween(ktm, ZoneId.of("Europe/London"), at).isNegative)
         assertEquals("15 min", spanText(offsetBetween(ktm, ZoneId.of("Asia/Kolkata"), at)))
+        assertEquals("6 d 7 h", spanText(Duration.ofHours(151).plusMinutes(41)))
+        assertEquals("2 d", spanText(Duration.ofHours(48)))
     }
 
     @Test fun bsDate() {

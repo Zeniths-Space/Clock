@@ -72,8 +72,6 @@
     <string name="warn_notifications">Notifications are off, so alarms can\'t ring. Turn them on.</string>
     <string name="warn_exact">Alarms may ring a few minutes late. Allow alarms and reminders.</string>
     <string name="warn_full_screen">Alarms can\'t show over the lock screen. Allow full-screen alarms.</string>
-    <string name="no_alarms">No alarms yet</string>
-    <string name="no_alarms_sub">Tap + to set one. It rings even if the phone restarts overnight.</string>
     <string name="fix">Fix</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
