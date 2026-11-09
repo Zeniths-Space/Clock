@@ -16,5 +16,10 @@ One app module, Jetpack Compose, no other libraries.
 - `Bs.kt`, `BsTable.kt`: AD to Bikram Sambat dates, copied from Elara Calendar (no shared code at
   run time).
 
-Not yet built: storage, the alarm engine (exact alarms, the ringing screen, notifications, boot and
-time-zone change handling).
+- `Alarm.kt`: an alarm, its JSON form, when it next rings, and its days label.
+- `AlarmEngine.kt`: the alarms in device-protected storage (written before returning, so a receiver's
+  write is never lost), scheduling with `setAlarmClock`, ringing through a full-screen notification on
+  the alarm volume, snooze and dismiss; `AlarmReceiver` (ring, snooze, dismiss) and
+  `RescheduleReceiver` (boot, locked boot, update, time and time-zone changes).
+- `RingActivity.kt`: the ringing screen over the lock screen.
+- `ClockApplication.kt`: sets alarms again whenever the process starts.

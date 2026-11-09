@@ -3,9 +3,28 @@
 A private, offline Android clock. Part of the Zenith's Space app collection.
 Application ID `com.elara.clock`.
 
-**Status: interface only.** This first version is the approved design with working screens, but no
-alarm engine yet: alarms are sample alarms kept in memory, and nothing rings, notifies or runs in
-the background. The timer and stopwatch count only while the app is open.
+**Status:** alarms work: they are saved, ring on time over the lock screen, snooze and survive a restart.
+Adding an alarm is a plain time picker for now (a one-time alarm); the full add/edit sheet (days,
+name, vibration) comes next. The timer and stopwatch still count only while the app is open and do
+not alert yet.
+
+## Alarms
+
+- Each alarm that is on is set with Android's alarm clock (`AlarmManager.setAlarmClock`): exact,
+  allowed in Doze, shown as the alarm icon in the status bar. Nothing runs between alarms.
+- When it goes off, a full-screen alarm shows over the lock screen with the time, Snooze (10 min) and
+  Dismiss. The sound is the phone's default alarm sound on the alarm volume, repeating until answered
+  (it rings with the ringer on silent and through Do not disturb's alarm exception), and stops after 10
+  minutes if nobody answers. Back does not silence it.
+- A one-time alarm turns itself off after ringing; a repeating one is set for its next day. Times are
+  wall-clock times, so daylight-saving changes keep 07:00 at 07:00.
+- Alarms are set again after a restart (also before the phone is first unlocked: they are kept in
+  device-protected storage), after an update, after a time or time-zone change, and whenever the app's
+  process starts (One UI does not always deliver the update broadcast).
+- The Alarms screen warns, with a Fix button, if notifications are off (alarms could not ring), if
+  exact alarms are not allowed, or if full-screen alarms are not allowed.
+- Limitation: like every Android app, after a force stop from App info the app gets no broadcasts until
+  it is opened again, so alarms are not restored after a restart until then.
 
 ## Screens
 
