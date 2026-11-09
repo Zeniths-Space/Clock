@@ -32,13 +32,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!--
-                Live icon for Elara Launcher: the face and each hand (pointing at 12) as their own
-                drawables, which it turns to the time each minute. Other launchers show the plain icon.
-            -->
-            <meta-data android:name="com.elara.launcher.clock.face" android:resource="@drawable/ic_clock_face" />
-            <meta-data android:name="com.elara.launcher.clock.hour" android:resource="@drawable/ic_clock_hour" />
-            <meta-data android:name="com.elara.launcher.clock.minute" android:resource="@drawable/ic_clock_minute" />
         </activity>
 
         <!--

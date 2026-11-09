@@ -5,9 +5,7 @@ The design, in the Elara 3D style (One UI 8): a clock face that fills the icon, 
 the top left on a pale lavender ground, with four lilac marks at 12, 3, 6 and 9, a deep-ink minute hand,
 a glossy brand-purple hour hand and a purple cap. Soft shadows only; no tile.
 
-Besides the full icon (hands at ten past ten, for launchers that draw icons as they are), it writes the
-face and each hand as their own layers, hands pointing at 12, for Elara Launcher's live clock icon:
-it turns the hands to the time and draws their shadows itself, so the light stays at the top left.
+The hands stay at ten past ten: the icon does not show the time (the owner chose a still icon, 2026-11-09).
 Run from the repository root after changing the design: python3 tools/icon.py
 """
 import math
@@ -115,10 +113,6 @@ full = face() + hour_layer(STATIC_HOUR, True) + minute_layer(STATIC_MINUTE, True
     f'        <path android:pathData="{circle(CX, CY, FACE_R)}{circle(CX, CY, FACE_R - 2.4)}" android:fillColor="{WHITE}" android:fillType="evenOdd" />\n'
     + path(MARKS + hour_hand(STATIC_HOUR) + minute_hand(STATIC_MINUTE) + CAP, WHITE),
 ))
-# Live icon layers (read by Elara Launcher through the activity's meta-data).
-(RES / "ic_clock_face.xml").write_text(vector("Live clock icon: the face without hands.", face()))
-(RES / "ic_clock_hour.xml").write_text(vector("Live clock icon: the hour hand at 12, no shadow.", hour_layer()))
-(RES / "ic_clock_minute.xml").write_text(vector("Live clock icon: the minute hand at 12 and the cap, no shadow.", minute_layer()))
 
 # The splash icons: the face and hands on nothing (the splash ground is the app's lavender). 288 dp square,
 # artwork inside the 192 dp circle Android keeps. splash_icon is still (the window background on Android 8 to

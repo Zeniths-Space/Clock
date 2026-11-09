@@ -63,9 +63,8 @@ Debug builds install as `com.elara.clock.dev`, beside a release build. Release b
 when the Gradle property `elaraClockSigning` points to a `keystore.properties` file
 (storeFile, storePassword, keyAlias, keyPassword) outside this repository.
 
-The app icon is generated: edit and run `python3 tools/icon.py`. It is a clock face filling the icon
-(hands at ten past ten). The script also writes the face and each hand as their own drawables, which
-the launcher activity names in its meta-data, so Elara Launcher can show the live time on the icon.
+The app icon is generated: edit and run `python3 tools/icon.py`. It is a clock face filling the icon,
+hands at ten past ten; it does not change with the time.
 
 ## Documentation
 
