@@ -9,9 +9,11 @@ the background. The timer and stopwatch count only while the app is open.
 
 ## Screens
 
-The look is lavender glass on a pale ground: frosted white cards, the brand purple ramp for the
-main tiles and buttons, thin oversized digits (Outfit) and small mono labels (JetBrains Mono).
-A floating glass tab bar at the bottom shows icons only; the open tab sits in a dark pill.
+It follows the system theme. Light is lavender glass on a pale ground: frosted white cards, the
+brand purple ramp for the main tiles and buttons, thin oversized digits (Outfit) and small mono
+labels (JetBrains Mono). Dark is AMOLED, like every Elara app: a black page, #141414 cards with a
+#1F1F1F edge, white text and #B69CFF purple text. A small floating tab bar sits centred at the
+bottom, icons only; the open tab is in a dark pill (purple in dark mode).
 
 - **Clock**: your city's time in huge thin digits, beside a line through your time zone on a dotted
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
