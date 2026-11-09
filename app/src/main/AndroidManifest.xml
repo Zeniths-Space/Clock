@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    No permissions yet: this first version is the interface only. Alarms, timer alerts and their
-    permissions (exact alarms, notifications, boot) come with the alarm engine.
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- No INTERNET permission: the app cannot open network connections. -->
+    <!-- Alarms ring through a notification; asked for (Android 13+) when the first alarm is turned on. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The ringing alarm over the lock screen. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Exact alarms: granted to alarm clock apps on Android 13+; Android 12 asks the person. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <!-- Sets the alarms again after a restart: Android forgets them. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
+        android:name=".ClockApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -16,7 +26,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/launcher_label">
+            android:label="@string/launcher_label"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -29,5 +40,39 @@
             <meta-data android:name="com.elara.launcher.clock.hour" android:resource="@drawable/ic_clock_hour" />
             <meta-data android:name="com.elara.launcher.clock.minute" android:resource="@drawable/ic_clock_minute" />
         </activity>
+
+        <!--
+            The ringing alarm. Direct-boot aware, like the receivers: after a restart alarms ring before the
+            phone is first unlocked. Only this app's notification starts it.
+        -->
+        <activity
+            android:name=".RingActivity"
+            android:directBootAware="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:turnScreenOn="true" />
+
+        <!-- An alarm going off, Snooze and Dismiss: only this app's PendingIntents reach it. -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+
+        <!-- Sets the alarms again after a restart (before and after unlock), an update, or a time change. -->
+        <receiver
+            android:name=".RescheduleReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

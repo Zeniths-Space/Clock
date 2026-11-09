@@ -32,6 +32,21 @@
     <string name="rings_in">in %1$s</string>
     <string name="now_label">%1$s now</string>
     <string name="add_alarm">Add alarm</string>
+    <string name="alarm">Alarm</string>
+    <string name="snooze">Snooze</string>
+    <string name="snooze_for">Snooze %1$d min</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="ringing">RINGING</string>
+    <string name="channel_alarms">Alarms</string>
+    <string name="channel_alarms_quiet">Alarms without vibration</string>
+    <string name="no_alarms">No alarms yet</string>
+    <string name="no_alarms_sub">Tap + to set one. It rings even if the phone restarts overnight.</string>
+    <string name="warn_notifications">Notifications are off, so alarms can\'t ring. Turn them on.</string>
+    <string name="warn_exact">Alarms may ring a few minutes late. Allow alarms and reminders.</string>
+    <string name="warn_full_screen">Alarms can\'t show over the lock screen. Allow full-screen alarms.</string>
+    <string name="fix">Fix</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
 
     <string name="timer_list">Timers</string>
     <string name="timer_ends">ENDS %1$s · OF %2$s</string>

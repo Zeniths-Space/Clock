@@ -37,20 +37,45 @@ class ClockLogicTest {
     }
 
     @Test fun nextRingSkipsDaysNotChosen() {
-        val alarm = Alarm("Gym", LocalTime.of(6, 30), setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), true)
+        val alarm = Alarm(1, LocalTime.of(6, 30), setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), "Gym")
         // Monday 2026-11-09 at 20:00: Monday's has passed, so Wednesday's.
         val now = ZonedDateTime.of(2026, 11, 9, 20, 0, 0, 0, ktm)
         assertEquals(ZonedDateTime.of(2026, 11, 11, 6, 30, 0, 0, ktm), nextRing(alarm, now))
     }
 
     @Test fun nextRingLaterToday() {
-        val alarm = Alarm("Medicine", LocalTime.of(21, 0), DayOfWeek.entries.toSet(), true)
+        val alarm = Alarm(2, LocalTime.of(21, 0), DayOfWeek.entries.toSet(), "Medicine")
         val now = ZonedDateTime.of(2026, 11, 9, 20, 0, 0, 0, ktm)
         assertEquals(ZonedDateTime.of(2026, 11, 9, 21, 0, 0, 0, ktm), nextRing(alarm, now))
     }
 
     @Test fun offAlarmNeverRings() {
-        assertNull(nextRing(Alarm("Nap", LocalTime.NOON, emptySet(), false), ZonedDateTime.now(ktm)))
+        assertNull(nextRing(Alarm(3, LocalTime.NOON, on = false), ZonedDateTime.now(ktm)))
+    }
+
+    @Test fun oneTimeAlarmRingsTomorrowWhenTodaysTimeHasPassed() {
+        val now = ZonedDateTime.of(2026, 11, 9, 20, 0, 0, 0, ktm)
+        assertEquals(ZonedDateTime.of(2026, 11, 10, 6, 0, 0, 0, ktm), nextRing(Alarm(4, LocalTime.of(6, 0)), now))
+    }
+
+    @Test fun pendingSnoozeComesFirst() {
+        val now = ZonedDateTime.of(2026, 11, 9, 6, 30, 0, 0, ktm)
+        val until = now.plusMinutes(10)
+        val alarm = Alarm(5, LocalTime.of(6, 30), DayOfWeek.entries.toSet(), snoozedUntil = until.toInstant().toEpochMilli())
+        assertEquals(until.toInstant(), nextRing(alarm, now)!!.toInstant())
+    }
+
+    @Test fun nextAlarmIsTheSoonestOn() {
+        val now = ZonedDateTime.of(2026, 11, 9, 20, 0, 0, 0, ktm)
+        val list = listOf(Alarm(1, LocalTime.of(6, 30)), Alarm(2, LocalTime.of(21, 0)), Alarm(3, LocalTime.of(20, 30), on = false))
+        assertEquals(2, AlarmEngine.next(list, now)!!.first.id)
+    }
+
+    @Test fun daylightSavingKeepsWallClockTime() {
+        // London springs forward on 2026-03-29: 07:00 is still 07:00 local, one hour less after midnight.
+        val london = ZoneId.of("Europe/London")
+        val now = ZonedDateTime.of(2026, 3, 28, 22, 0, 0, 0, london)
+        assertEquals(ZonedDateTime.of(2026, 3, 29, 7, 0, 0, 0, london), nextRing(Alarm(6, LocalTime.of(7, 0)), now))
     }
 
     @Test fun dayLabels() {

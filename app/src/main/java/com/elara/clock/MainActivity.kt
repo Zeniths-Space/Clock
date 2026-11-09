@@ -1,6 +1,7 @@
 package com.elara.clock
 
 import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -27,6 +29,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
+    /** A tab asked for from outside (the status bar's alarm icon opens Alarms); null once shown. */
+    private var asked by mutableStateOf<Tab?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         holdSplash()
@@ -35,7 +40,19 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.auto(Color.Transparent.toArgb(), Color.Transparent.toArgb()),
             navigationBarStyle = SystemBarStyle.auto(Color.Transparent.toArgb(), Color.Transparent.toArgb()),
         )
-        setContent { ElaraTheme { ClockApp() } }
+        if (savedInstanceState == null) asked = tabFor(intent)
+        setContent { ElaraTheme { ClockApp(asked) { asked = null } } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        asked = tabFor(intent)
+    }
+
+    private fun tabFor(intent: Intent?) = if (intent?.getBooleanExtra(OpenAlarms, false) == true) Tab.ALARMS else null
+
+    companion object {
+        const val OpenAlarms = "com.elara.clock.OPEN_ALARMS"
     }
 }
 
@@ -56,8 +73,14 @@ private fun ComponentActivity.holdSplash() {
 }
 
 @Composable
-fun ClockApp() {
+fun ClockApp(asked: Tab? = null, onAskedShown: () -> Unit = {}) {
     var tab by rememberSaveable { mutableStateOf(Tab.CLOCK) }
+    LaunchedEffect(asked) {
+        if (asked != null) {
+            tab = asked
+            onAskedShown()
+        }
+    }
     // Back from any other tab returns to the clock first, as in the stock app.
     BackHandler(enabled = tab != Tab.CLOCK) { tab = Tab.CLOCK }
     Box(Modifier.fillMaxSize().pageBackground()) {

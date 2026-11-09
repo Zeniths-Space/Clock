@@ -1,6 +1,23 @@
 package com.elara.clock
 
 import android.text.format.DateFormat
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,63 +63,53 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import java.time.DayOfWeek
-import java.time.DayOfWeek.FRIDAY
-import java.time.DayOfWeek.MONDAY
-import java.time.DayOfWeek.SATURDAY
-import java.time.DayOfWeek.SUNDAY
-import java.time.DayOfWeek.THURSDAY
-import java.time.DayOfWeek.TUESDAY
-import java.time.DayOfWeek.WEDNESDAY
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.format.TextStyle
-import java.util.Locale
-
-/** An alarm as the screen shows it. This first version keeps sample alarms in memory; nothing rings yet. */
-data class Alarm(val label: String, val time: LocalTime, val days: Set<DayOfWeek>, val on: Boolean)
-
-private val SampleAlarms = listOf(
-    Alarm("Gym", LocalTime.of(6, 30), setOf(MONDAY, WEDNESDAY, FRIDAY), true),
-    Alarm("Work", LocalTime.of(7, 15), setOf(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY), true),
-    Alarm("Nap", LocalTime.of(14, 0), setOf(SATURDAY), false),
-    Alarm("Medicine", LocalTime.of(21, 0), DayOfWeek.entries.toSet(), true),
-)
-
-/** When [alarm] next rings after [now], or null when it is off. */
-fun nextRing(alarm: Alarm, now: ZonedDateTime): ZonedDateTime? {
-    if (!alarm.on) return null
-    for (d in 0..7) {
-        val day = now.toLocalDate().plusDays(d.toLong())
-        val at = day.atTime(alarm.time).atZone(now.zone)
-        if (at.isAfter(now) && (alarm.days.isEmpty() || day.dayOfWeek in alarm.days)) return at
-    }
-    return null
-}
-
-/** "MON WED FRI", "WEEKDAYS", "WEEKENDS", "EVERY DAY", or "ONCE". */
-fun daysLabel(days: Set<DayOfWeek>): String = when {
-    days.isEmpty() -> "ONCE"
-    days.size == 7 -> "EVERY DAY"
-    days == setOf(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY) -> "WEEKDAYS"
-    days == setOf(SATURDAY, SUNDAY) -> "WEEKENDS"
-    else -> DayOfWeek.entries.filter { it in days }.joinToString(" ") { it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase() }
-}
 
 private val HeroDigits = sans(112, weight = 600, spacing = -6f)
 
+/** Why alarms might not ring, with where to fix it. */
+private enum class RingProblem(val text: Int) { NOTIFICATIONS(R.string.warn_notifications), EXACT(R.string.warn_exact), FULL_SCREEN(R.string.warn_full_screen) }
+
 @Composable
 fun AlarmsScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val now by rememberNow()
     val zone = remember { ZoneId.systemDefault() }
     var twentyFour by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    val systemTwentyFour = DateFormat.is24HourFormat(LocalContext.current)
+    val systemTwentyFour = DateFormat.is24HourFormat(context)
     val use24 = twentyFour ?: systemTwentyFour
-    val alarms = remember { mutableStateListOf(*SampleAlarms.toTypedArray()) }
+    val alarms by remember { AlarmEngine.alarms(context) }.collectAsState()
     val here = now.atZone(zone)
-    val next = alarms.mapIndexedNotNull { i, a -> nextRing(a, here)?.let { i to it } }.minByOrNull { it.second }
+    val next = AlarmEngine.next(alarms, here)
+    var picking by rememberSaveable { mutableStateOf(false) }
+
+    // What could stop alarms ringing, checked again each time the screen comes back (say, from Settings).
+    var checks by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        checks++
+        onPauseOrDispose {}
+    }
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { checks++ }
+    val anyOn = alarms.any { it.on }
+    val problem = remember(checks, anyOn) {
+        when {
+            !anyOn -> null
+            !AlarmEngine.canNotify(context) -> RingProblem.NOTIFICATIONS
+            !AlarmEngine.canRingOnTime(context) -> RingProblem.EXACT
+            !AlarmEngine.canShowFullScreen(context) -> RingProblem.FULL_SCREEN
+            else -> null
+        }
+    }
+    // Alarms ring through a notification: ask (Android 13+) the first time one is turned on.
+    val ensureCanRing = {
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     Box(modifier.fillMaxSize()) {
         Column(
             Modifier
@@ -117,12 +123,16 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
                 Text(stringResource(R.string.tab_alarms), style = sans(30, 500, spacing = -0.5f), modifier = Modifier.weight(1f))
                 FormatSwitch(use24) { twentyFour = it }
             }
-            next?.let { (i, at) -> NextAlarmCard(alarms[i], at, here, use24) }
-            alarms.chunked(2).forEachIndexed { row, pair ->
+            problem?.let { WarningCard(it) { context.openFix(it) } }
+            if (alarms.isEmpty()) EmptyCard()
+            next?.let { (alarm, at) -> NextAlarmCard(alarm, at, here, use24) }
+            alarms.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    pair.forEachIndexed { col, alarm ->
-                        val index = row * 2 + col
-                        AlarmTile(alarm, hero = next?.first == index, use24, Modifier.weight(1f)) { alarms[index] = alarm.copy(on = it) }
+                    pair.forEach { alarm ->
+                        AlarmTile(alarm, hero = next?.first?.id == alarm.id, use24, Modifier.weight(1f)) { on ->
+                            if (on) ensureCanRing()
+                            AlarmEngine.setOn(context, alarm.id, on)
+                        }
                     }
                     if (pair.size == 1) Box(Modifier.weight(1f))
                 }
@@ -138,11 +148,72 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
                 .shadow(14.dp, CircleShape, ambientColor = Ink.purpleDeep.copy(alpha = 0.35f), spotColor = Ink.purpleDeep.copy(alpha = 0.45f))
                 .background(PurpleRamp, CircleShape)
                 .clip(CircleShape)
-                .clickable(role = Role.Button, onClickLabel = addLabel) {}
+                .clickable(role = Role.Button, onClickLabel = addLabel) { picking = true }
                 .semantics { contentDescription = addLabel },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Plus, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
     }
+
+    // shortcut: a plain time picker adds a one-time alarm; the full add/edit sheet (days, label, vibration) replaces it.
+    if (picking) {
+        TimePickDialog(use24, onDismiss = { picking = false }) { time ->
+            picking = false
+            AlarmEngine.save(context, Alarm(id = AlarmEngine.newId(context), time = time))
+            ensureCanRing()
+        }
+    }
+}
+
+@Composable
+private fun EmptyCard() {
+    val shape = RoundedCornerShape(32.dp)
+    Column(Modifier.fillMaxWidth().glass(shape, elevation = 12.dp).padding(24.dp)) {
+        Text(stringResource(R.string.no_alarms), style = sans(20, 500))
+        Text(stringResource(R.string.no_alarms_sub), style = sans(14, color = Ink.muted), modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
+@Composable
+private fun WarningCard(problem: RingProblem, onFix: () -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    Row(Modifier.fillMaxWidth().glass(shape, elevation = 8.dp).padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(problem.text), style = sans(14, 500), modifier = Modifier.weight(1f).padding(end = 10.dp))
+        Text(
+            stringResource(R.string.fix),
+            style = sans(14, 500, Color.White),
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(PurpleRamp)
+                .clickable(role = Role.Button, onClick = onFix)
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+        )
+    }
+}
+
+/** The Settings page that fixes [problem], for this app. */
+private fun Context.openFix(problem: RingProblem) {
+    val intent = when {
+        problem == RingProblem.EXACT && Build.VERSION.SDK_INT >= 31 -> Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, "package:$packageName".toUri())
+        problem == RingProblem.FULL_SCREEN && Build.VERSION.SDK_INT >= 34 -> Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, "package:$packageName".toUri())
+        else -> Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+    }
+    runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickDialog(twentyFour: Boolean, onDismiss: () -> Unit, onPick: (LocalTime) -> Unit) {
+    // Starts at the next minute, so a quick alarm is one tap away.
+    val start = remember { LocalTime.now().plusMinutes(1) }
+    val state = rememberTimePickerState(initialHour = start.hour, initialMinute = start.minute, is24Hour = twentyFour)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = if (Ink.dark) Color(0xFF141414) else Color.White,
+        title = { Text(stringResource(R.string.add_alarm), style = sans(20, 500)) },
+        text = { TimePicker(state) },
+        confirmButton = { TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }) { Text(stringResource(R.string.save), style = sans(15, 500, Ink.accent)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), style = sans(15, 500, Ink.muted)) } },
+    )
 }
 
 /** 12h / 24h, a small glass segmented switch; the chosen half dark. */
@@ -179,7 +250,7 @@ private fun NextAlarmCard(alarm: Alarm, at: ZonedDateTime, now: ZonedDateTime, t
     val shape = RoundedCornerShape(32.dp)
     Column(Modifier.fillMaxWidth().glass(shape, elevation = 16.dp).clip(shape)) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
-            Text(stringResource(R.string.next_alarm, alarm.label), style = sans(13, 500), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.next_alarm, alarm.label.ifBlank { stringResource(R.string.alarm) }), style = sans(13, 500), modifier = Modifier.weight(1f))
             Text(stringResource(R.string.rings_in, spanText(until)), style = sans(13, 500, Ink.accent))
         }
         DigitRow(hour.toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.lilac, divider = true)
@@ -247,8 +318,9 @@ private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(alarm.label, style = sans(14, 500, fg), modifier = Modifier.weight(1f))
-            PillSwitch(alarm.on, onToggle, alarm.label, track = if (hero) Color.White.copy(alpha = 0.3f) else Ink.purple)
+            val name = alarm.label.ifBlank { stringResource(R.string.alarm) }
+            Text(name, style = sans(14, 500, fg), modifier = Modifier.weight(1f))
+            PillSwitch(alarm.on, onToggle, name, track = if (hero) Color.White.copy(alpha = 0.3f) else Ink.purple)
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(time, style = sans(38, 400, fg, spacing = -1f))
