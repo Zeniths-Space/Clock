@@ -60,7 +60,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Heavy stacked digits, one per row, as in the design. */
-val RowDigits = outfit(132, weight = 700, spacing = -8f)
+val RowDigits = sans(132, weight = 700, spacing = -8f)
 
 private val Presets = listOf(1, 3, 5, 10, 15, 25, 45)
 
@@ -100,8 +100,8 @@ fun TimerScreen(modifier: Modifier = Modifier) {
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.tab_timer), style = outfit(22, 500))
-                Text(stringResource(R.string.timer_ends, ends.hm(DateFormat.is24HourFormat(LocalContext.current)), clockText(durationMs / 1000)), style = mono(11))
+                Text(stringResource(R.string.tab_timer), style = sans(22, 500))
+                Text(stringResource(R.string.timer_ends, ends.hm(DateFormat.is24HourFormat(LocalContext.current)), clockText(durationMs / 1000)), style = smallText(11))
             }
             GlassIconButton(Icons.List, stringResource(R.string.timer_list))
         }
@@ -153,7 +153,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
                     }
                     .semantics { contentDescription = addLabel },
                 contentAlignment = Alignment.Center,
-            ) { Text("+1m", style = mono(12, Ink.text)) }
+            ) { Text("+1m", style = smallText(12, Ink.text)) }
         }
     }
 }
@@ -173,7 +173,7 @@ fun StackRow(value: String, unit: String, color: Color) {
             .padding(horizontal = 20.dp),
     ) {
         Digits(value, RowDigits.copy(color = color), 104.dp, Modifier.weight(1f))
-        Text(unit, style = mono(11), modifier = Modifier.padding(top = 10.dp))
+        Text(unit, style = smallText(11), modifier = Modifier.padding(top = 10.dp))
     }
 }
 
@@ -193,7 +193,7 @@ fun MainButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Str
     ) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
-        Text(label, style = outfit(17, 500, Color.White))
+        Text(label, style = sans(17, 500, Color.White))
     }
 }
 
@@ -223,7 +223,7 @@ private fun PresetDial(selected: Int, onSelect: (Int) -> Unit) {
             val on = i == index
             Text(
                 "${m}M",
-                style = mono(if (on) 15 else 11, if (on) Ink.text else Ink.muted, weight = if (on) 500 else 400),
+                style = smallText(if (on) 15 else 11, if (on) Ink.text else Ink.muted, weight = if (on) 500 else 400),
                 modifier = Modifier
                     .onArc(degrees)
                     .alpha((1f - abs(degrees) / 48f).coerceIn(0f, 1f))

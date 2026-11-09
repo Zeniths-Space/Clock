@@ -56,7 +56,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
             .padding(top = 6.dp, bottom = NavBarSpace),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.cities_count, Cities.all.size), style = mono(12), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.cities_count, Cities.all.size), style = smallText(12), modifier = Modifier.weight(1f))
             GlassIconButton(Icons.Plus, stringResource(R.string.add_city))
         }
         Text(
@@ -65,7 +65,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
                 append("\n")
                 withStyle(SpanStyle(color = Ink.soft)) { append(stringResource(R.string.around_world)) }
             },
-            style = outfit(34, 400, spacing = -0.5f).copy(lineHeight = 1.08.em),
+            style = sans(34, 400, spacing = -0.5f).copy(lineHeight = 1.08.em),
             modifier = Modifier.padding(top = 10.dp, bottom = 18.dp),
         )
 
@@ -88,12 +88,12 @@ fun WorldScreen(modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(utcLabel(city.zone, now), style = mono(11))
-                    Text(city.name, style = outfit(17, 500), modifier = Modifier.padding(vertical = 3.dp))
-                    Text(diffText, style = outfit(12, color = Ink.muted))
+                    Text(utcLabel(city.zone, now), style = smallText(11))
+                    Text(city.name, style = sans(17, 500), modifier = Modifier.padding(vertical = 3.dp))
+                    Text(diffText, style = sans(12, color = Ink.muted))
                 }
-                Text(there.hm(twentyFour), style = outfit(44, 300, spacing = -1.5f))
-                if (!twentyFour) Text(if (there.hour < 12) "am" else "pm", style = outfit(13, 500, Ink.muted), modifier = Modifier.padding(start = 4.dp, top = 14.dp))
+                Text(there.hm(twentyFour), style = sans(44, 300, spacing = -1.5f))
+                if (!twentyFour) Text(if (there.hour < 12) "am" else "pm", style = sans(13, 500, Ink.muted), modifier = Modifier.padding(start = 4.dp, top = 14.dp))
             }
         }
     }
@@ -144,7 +144,7 @@ private fun MapCard(home: City, cities: List<City>, now: java.time.Instant, twen
             bubbled += x
             Text(
                 now.atZone(city.zone).hm(twentyFour),
-                style = mono(10, if (isHome) Color.White else Ink.night, weight = 500),
+                style = smallText(10, if (isHome) Color.White else Ink.night, weight = 500),
                 modifier = Modifier
                     .pinAt(x, y, 14.dp)
                     .background(if (isHome) Ink.purple else Ink.lavender, RoundedCornerShape(9.dp))
@@ -153,7 +153,7 @@ private fun MapCard(home: City, cities: List<City>, now: java.time.Instant, twen
         }
         Text(
             stringResource(R.string.map_now, now.atZone(home.zone).hm(twentyFour), home.name),
-            style = outfit(12, color = Ink.lavender),
+            style = sans(12, color = Ink.lavender),
             modifier = Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 14.dp),
         )
     }

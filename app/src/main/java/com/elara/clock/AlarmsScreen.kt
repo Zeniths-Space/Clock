@@ -92,7 +92,7 @@ fun daysLabel(days: Set<DayOfWeek>): String = when {
     else -> DayOfWeek.entries.filter { it in days }.joinToString(" ") { it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase() }
 }
 
-private val HeroDigits = outfit(112, weight = 600, spacing = -6f)
+private val HeroDigits = sans(112, weight = 600, spacing = -6f)
 
 @Composable
 fun AlarmsScreen(modifier: Modifier = Modifier) {
@@ -114,7 +114,7 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.tab_alarms), style = outfit(30, 500, spacing = -0.5f), modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.tab_alarms), style = sans(30, 500, spacing = -0.5f), modifier = Modifier.weight(1f))
                 FormatSwitch(use24) { twentyFour = it }
             }
             next?.let { (i, at) -> NextAlarmCard(alarms[i], at, here, use24) }
@@ -160,7 +160,7 @@ private fun FormatSwitch(twentyFour: Boolean, onChange: (Boolean) -> Unit) {
             val on = value == twentyFour
             Text(
                 text,
-                style = mono(12, if (on) Color.White else Ink.muted),
+                style = smallText(12, if (on) Color.White else Ink.muted),
                 modifier = Modifier
                     .clip(RoundedCornerShape(11.dp))
                     .background(if (on) Ink.chosen else Color.Transparent)
@@ -179,8 +179,8 @@ private fun NextAlarmCard(alarm: Alarm, at: ZonedDateTime, now: ZonedDateTime, t
     val shape = RoundedCornerShape(32.dp)
     Column(Modifier.fillMaxWidth().glass(shape, elevation = 16.dp).clip(shape)) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
-            Text(stringResource(R.string.next_alarm, alarm.label), style = outfit(13, 500), modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.rings_in, spanText(until)), style = outfit(13, 500, Ink.accent))
+            Text(stringResource(R.string.next_alarm, alarm.label), style = sans(13, 500), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.rings_in, spanText(until)), style = sans(13, 500, Ink.accent))
         }
         DigitRow(hour.toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.lilac, divider = true)
         DigitRow(at.minute.toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.text, divider = false)
@@ -198,7 +198,7 @@ private fun DigitRow(value: String, unit: String, color: Color, divider: Boolean
         verticalAlignment = Alignment.Bottom,
     ) {
         Digits(value, HeroDigits.copy(color = color), 100.dp, Modifier.weight(1f))
-        Text(unit, style = mono(11), modifier = Modifier.padding(bottom = 14.dp))
+        Text(unit, style = smallText(11), modifier = Modifier.padding(bottom = 14.dp))
     }
 }
 
@@ -220,8 +220,8 @@ private fun NightLine(nowLabel: String, endLabel: String) {
             drawCircle(Ink.purple.copy(alpha = 0.2f), 11.dp.toPx(), tip)
             drawCircle(Ink.purple, 6.dp.toPx(), tip)
         }
-        Text(stringResource(R.string.now_label, nowLabel), style = mono(10))
-        Text(endLabel, style = mono(10), modifier = Modifier.align(Alignment.TopEnd))
+        Text(stringResource(R.string.now_label, nowLabel), style = smallText(10))
+        Text(endLabel, style = smallText(10), modifier = Modifier.align(Alignment.TopEnd))
     }
 }
 
@@ -247,16 +247,16 @@ private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(alarm.label, style = outfit(14, 500, fg), modifier = Modifier.weight(1f))
+            Text(alarm.label, style = sans(14, 500, fg), modifier = Modifier.weight(1f))
             PillSwitch(alarm.on, onToggle, alarm.label, track = if (hero) Color.White.copy(alpha = 0.3f) else Ink.purple)
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(time, style = outfit(38, 400, fg, spacing = -1f))
-            if (!twentyFour) Text(if (alarm.time.hour < 12) "am" else "pm", style = outfit(13, 500, fg.copy(alpha = 0.7f)), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+            Text(time, style = sans(38, 400, fg, spacing = -1f))
+            if (!twentyFour) Text(if (alarm.time.hour < 12) "am" else "pm", style = sans(13, 500, fg.copy(alpha = 0.7f)), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         }
         Text(
             daysLabel(alarm.days),
-            style = mono(10, if (hero) Color.White else Ink.chipFg),
+            style = smallText(10, if (hero) Color.White else Ink.chipFg),
             modifier = Modifier
                 .background(if (hero) Color.White.copy(alpha = 0.22f) else Ink.chipBg, RoundedCornerShape(8.dp))
                 .padding(horizontal = 7.dp, vertical = 3.dp),

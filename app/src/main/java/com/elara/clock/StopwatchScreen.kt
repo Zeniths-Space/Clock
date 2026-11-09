@@ -54,7 +54,7 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(top = 6.dp, bottom = NavBarSpace),
     ) {
-        Text(stringResource(R.string.tab_stopwatch), style = outfit(22, 500), modifier = Modifier.padding(horizontal = 20.dp))
+        Text(stringResource(R.string.tab_stopwatch), style = sans(22, 500), modifier = Modifier.padding(horizontal = 20.dp))
         Column(
             Modifier
                 .padding(top = 14.dp)
@@ -87,16 +87,16 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
         }
 
         if (laps.isNotEmpty()) {
-            Text(stringResource(R.string.laps), style = mono(11), modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp))
+            Text(stringResource(R.string.laps), style = smallText(11), modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp))
             Column(
                 Modifier.padding(horizontal = 20.dp).fillMaxWidth().glass(RoundedCornerShape(26.dp), elevation = 10.dp).padding(vertical = 6.dp),
             ) {
                 laps.forEachIndexed { i, at ->
                     val previous = laps.getOrNull(i + 1) ?: 0L
                     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.lap_n, laps.size - i), style = outfit(15, 500), modifier = Modifier.weight(1f))
-                        Text(lapText(at - previous), style = mono(13, Ink.accent, weight = 500), modifier = Modifier.padding(end = 16.dp))
-                        Text(lapText(at), style = mono(13, Ink.text))
+                        Text(stringResource(R.string.lap_n, laps.size - i), style = sans(15, 500), modifier = Modifier.weight(1f))
+                        Text(lapText(at - previous), style = smallText(13, Ink.accent, weight = 500), modifier = Modifier.padding(end = 16.dp))
+                        Text(lapText(at), style = smallText(13, Ink.text))
                     }
                 }
             }

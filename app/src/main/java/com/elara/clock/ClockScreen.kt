@@ -47,7 +47,7 @@ import java.time.temporal.ChronoUnit
 import java.time.temporal.IsoFields
 
 /** Big thin digits for the time, hours over minutes. */
-private val BigDigits = outfit(164, weight = 200, spacing = -8f)
+private val BigDigits = sans(164, weight = 200, spacing = -8f)
 
 /** Home: the time where you are, the day (with its Nepali date), the sun, and other cities a tap away. */
 @Composable
@@ -72,7 +72,7 @@ fun ClockScreen(modifier: Modifier = Modifier) {
                     .padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(if (home.country.isEmpty()) home.name else "${home.name}, ${home.country}", style = outfit(16, 500))
+                Text(if (home.country.isEmpty()) home.name else "${home.name}, ${home.country}", style = sans(16, 500))
                 Spacer(Modifier.width(6.dp))
                 Icon(Icons.Chevron, null, tint = Ink.text, modifier = Modifier.size(16.dp))
             }
@@ -90,7 +90,7 @@ fun ClockScreen(modifier: Modifier = Modifier) {
                 Row {
                     Digits(here.format(if (twentyFour) H24 else H12), BigDigits, 138.dp)
                     if (!twentyFour) {
-                        Text(if (here.hour < 12) "AM" else "PM", style = outfit(15, 500, Ink.accent), modifier = Modifier.padding(start = 6.dp, top = 16.dp))
+                        Text(if (here.hour < 12) "AM" else "PM", style = sans(15, 500, Ink.accent), modifier = Modifier.padding(start = 6.dp, top = 16.dp))
                     }
                 }
                 Digits(here.format(MM), BigDigits, 138.dp)
@@ -132,7 +132,7 @@ private fun TimeZoneStrip(home: City, now: Instant) {
                     onDrawBehind { drawWorldMap(points, Ink.mapDot, dot) }
                 },
         )
-        Text(stringResource(R.string.time_zone), style = outfit(13, 500), modifier = Modifier.padding(start = 18.dp, top = 8.dp))
+        Text(stringResource(R.string.time_zone), style = sans(13, 500), modifier = Modifier.padding(start = 18.dp, top = 8.dp))
         Box(Modifier.padding(start = 66.dp, top = 36.dp, bottom = 36.dp).width(1.dp).fillMaxHeight().background(Ink.text))
         Box(
             Modifier
@@ -142,7 +142,7 @@ private fun TimeZoneStrip(home: City, now: Instant) {
                 .padding(5.dp)
                 .background(Ink.purple, CircleShape),
         )
-        Text(utc, style = mono(12, Ink.text), modifier = Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 8.dp))
+        Text(utc, style = smallText(12, Ink.text), modifier = Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 8.dp))
     }
 }
 
@@ -163,14 +163,14 @@ private fun TodayTile(home: City, now: Instant, modifier: Modifier) {
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.today), style = outfit(14, 500, Color.White), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.today), style = sans(14, 500, Color.White), modifier = Modifier.weight(1f))
             Box(Modifier.size(34.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Calendar, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
         Column {
-            Text(date.format(DayName), style = outfit(21, 500, Color.White).copy(lineHeight = 1.15.em))
-            Text(date.format(DayMonth), style = outfit(21, 500, Color.White).copy(lineHeight = 1.15.em))
+            Text(date.format(DayName), style = sans(21, 500, Color.White).copy(lineHeight = 1.15.em))
+            Text(date.format(DayMonth), style = sans(21, 500, Color.White).copy(lineHeight = 1.15.em))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TileChip(stringResource(R.string.week, date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)), Color.White.copy(alpha = 0.22f), Color.White)
@@ -190,7 +190,7 @@ private fun SunTile(home: City, now: Instant, modifier: Modifier) {
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.sun), style = outfit(14, 500), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.sun), style = sans(14, 500), modifier = Modifier.weight(1f))
             Box(Modifier.size(34.dp).background(Ink.chipBg, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Sun, null, tint = Ink.accent, modifier = Modifier.size(17.dp))
             }
@@ -199,12 +199,12 @@ private fun SunTile(home: City, now: Instant, modifier: Modifier) {
             val (rise, set) = sun
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.sunrise), style = outfit(11, color = Ink.muted))
-                    Text(rise.format(HourMinute), style = outfit(19, 500))
+                    Text(stringResource(R.string.sunrise), style = sans(11, color = Ink.muted))
+                    Text(rise.format(HourMinute), style = sans(19, 500))
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(stringResource(R.string.sunset), style = outfit(11, color = Ink.muted))
-                    Text(set.format(HourMinute), style = outfit(19, 500))
+                    Text(stringResource(R.string.sunset), style = sans(11, color = Ink.muted))
+                    Text(set.format(HourMinute), style = sans(19, 500))
                 }
             }
             val light = ChronoUnit.MINUTES.between(rise, set)
@@ -215,7 +215,7 @@ private fun SunTile(home: City, now: Instant, modifier: Modifier) {
 
 @Composable
 private fun TileChip(text: String, bg: Color, fg: Color) {
-    Text(text, style = outfit(11, color = fg), modifier = Modifier.background(bg, RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
+    Text(text, style = sans(11, color = fg), modifier = Modifier.background(bg, RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
 /** Your city large in the middle, two others each side; they spill past the screen edges, as in the design. */
@@ -247,8 +247,8 @@ private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(city.code, style = outfit(if (active) 22 else 15, 500, if (active) Ink.accent else Ink.text))
-                    Text(time, style = outfit(10, color = Ink.muted))
+                    Text(city.code, style = sans(if (active) 22 else 15, 500, if (active) Ink.accent else Ink.text))
+                    Text(time, style = sans(10, color = Ink.muted))
                 }
             }
         }

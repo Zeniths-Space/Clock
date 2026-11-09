@@ -21,11 +21,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -74,24 +71,17 @@ object Ink {
 /** The brand purple ramp, top left to bottom right: hero tiles and the main buttons. */
 val PurpleRamp = Brush.linearGradient(listOf(Ink.purpleLight, Ink.purple, Ink.purpleDeep))
 
-@OptIn(ExperimentalTextApi::class)
-private fun outfit(weight: Int) = Font(R.font.outfit, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+/**
+ * Text in the phone's own font (FontFamily.Default: Samsung's on One UI, Roboto or the maker's elsewhere),
+ * at [size] sp; [spacing] is letter spacing in sp (negative to tighten big digits). Digits are tabular, so
+ * times keep their width as they change.
+ */
+fun sans(size: Int, weight: Int = 400, color: Color = Ink.text, spacing: Float = 0f) =
+    TextStyle(fontFamily = FontFamily.Default, fontSize = size.sp, fontWeight = FontWeight(weight), color = color, letterSpacing = spacing.sp, fontFeatureSettings = "tnum")
 
-@OptIn(ExperimentalTextApi::class)
-private fun mono(weight: Int) = Font(R.font.jetbrains_mono, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
-
-/** Geometric sans for everything; the big clock digits use its thin weights. */
-val Outfit = FontFamily(outfit(200), outfit(300), outfit(400), outfit(500), outfit(600), outfit(700))
-
-/** Small technical labels: UTC offsets, units, chips. */
-val Mono = FontFamily(mono(400), mono(500))
-
-/** Outfit at [size] sp; [spacing] is letter spacing in sp (negative to tighten big digits). */
-fun outfit(size: Int, weight: Int = 400, color: Color = Ink.text, spacing: Float = 0f) =
-    TextStyle(fontFamily = Outfit, fontSize = size.sp, fontWeight = FontWeight(weight), color = color, letterSpacing = spacing.sp)
-
-fun mono(size: Int, color: Color = Ink.muted, weight: Int = 400) =
-    TextStyle(fontFamily = Mono, fontSize = size.sp, fontWeight = FontWeight(weight), color = color)
+/** Small technical labels (UTC offsets, units, chips): the system font, slightly spaced out, tabular digits. */
+fun smallText(size: Int, color: Color = Ink.muted, weight: Int = 400) =
+    TextStyle(fontFamily = FontFamily.Default, fontSize = size.sp, fontWeight = FontWeight(weight), color = color, letterSpacing = 0.6.sp, fontFeatureSettings = "tnum")
 
 /**
  * Frosted glass: white at [alpha] with a bright inner edge and a soft purple shadow. A real backdrop blur
