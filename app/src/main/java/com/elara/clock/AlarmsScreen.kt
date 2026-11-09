@@ -163,7 +163,7 @@ private fun FormatSwitch(twentyFour: Boolean, onChange: (Boolean) -> Unit) {
                 style = mono(12, if (on) Color.White else Ink.muted),
                 modifier = Modifier
                     .clip(RoundedCornerShape(11.dp))
-                    .background(if (on) Ink.text else Color.Transparent)
+                    .background(if (on) Ink.chosen else Color.Transparent)
                     .selectable(on, role = Role.RadioButton) { onChange(value) }
                     .padding(horizontal = 10.dp, vertical = 7.dp),
             )
@@ -180,7 +180,7 @@ private fun NextAlarmCard(alarm: Alarm, at: ZonedDateTime, now: ZonedDateTime, t
     Column(Modifier.fillMaxWidth().glass(shape, elevation = 16.dp).clip(shape)) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
             Text(stringResource(R.string.next_alarm, alarm.label), style = outfit(13, 500), modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.rings_in, spanText(until)), style = outfit(13, 500, Ink.purpleDeep))
+            Text(stringResource(R.string.rings_in, spanText(until)), style = outfit(13, 500, Ink.accent))
         }
         DigitRow(hour.toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.lilac, divider = true)
         DigitRow(at.minute.toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.text, divider = false)
@@ -256,9 +256,9 @@ private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier
         }
         Text(
             daysLabel(alarm.days),
-            style = mono(10, if (hero) Color.White else Ink.night),
+            style = mono(10, if (hero) Color.White else Ink.chipFg),
             modifier = Modifier
-                .background(if (hero) Color.White.copy(alpha = 0.22f) else Ink.lavender, RoundedCornerShape(8.dp))
+                .background(if (hero) Color.White.copy(alpha = 0.22f) else Ink.chipBg, RoundedCornerShape(8.dp))
                 .padding(horizontal = 7.dp, vertical = 3.dp),
         )
     }

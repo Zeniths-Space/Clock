@@ -61,7 +61,7 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
                 .drawBehind { drawLine(Ink.line, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx()) }
                 .semantics(mergeDescendants = true) { contentDescription = lapText(ms) },
         ) {
-            StackRow((ms / 60_000).toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.wash1)
+            StackRow((ms / 60_000).toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.faded)
             StackRow((ms / 1000 % 60).toString().padStart(2, '0'), stringResource(R.string.unit_sec), Ink.purpleLight)
             StackRow((ms / 10 % 100).toString().padStart(2, '0'), "1/100", Ink.text)
         }
@@ -95,7 +95,7 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
                     val previous = laps.getOrNull(i + 1) ?: 0L
                     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.lap_n, laps.size - i), style = outfit(15, 500), modifier = Modifier.weight(1f))
-                        Text(lapText(at - previous), style = mono(13, Ink.purpleDeep, weight = 500), modifier = Modifier.padding(end = 16.dp))
+                        Text(lapText(at - previous), style = mono(13, Ink.accent, weight = 500), modifier = Modifier.padding(end = 16.dp))
                         Text(lapText(at), style = mono(13, Ink.text))
                     }
                 }

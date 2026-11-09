@@ -111,7 +111,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
                 .drawBehind { drawLine(Ink.line, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx()) }
                 .semantics(mergeDescendants = true) { contentDescription = clockText(total) },
         ) {
-            StackRow((total / 3600).toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.wash1)
+            StackRow((total / 3600).toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.faded)
             StackRow((total / 60 % 60).toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.purpleLight)
             StackRow((total % 60).toString().padStart(2, '0'), stringResource(R.string.unit_sec), Ink.text)
         }

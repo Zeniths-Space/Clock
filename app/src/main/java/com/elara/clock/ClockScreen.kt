@@ -90,7 +90,7 @@ fun ClockScreen(modifier: Modifier = Modifier) {
                 Row {
                     Digits(here.format(if (twentyFour) H24 else H12), BigDigits, 138.dp)
                     if (!twentyFour) {
-                        Text(if (here.hour < 12) "AM" else "PM", style = outfit(15, 500, Ink.purpleDeep), modifier = Modifier.padding(start = 6.dp, top = 16.dp))
+                        Text(if (here.hour < 12) "AM" else "PM", style = outfit(15, 500, Ink.accent), modifier = Modifier.padding(start = 6.dp, top = 16.dp))
                     }
                 }
                 Digits(here.format(MM), BigDigits, 138.dp)
@@ -129,7 +129,7 @@ private fun TimeZoneStrip(home: City, now: Instant) {
                     val origin = Offset(66.dp.toPx() - WorldMap.x(home.lon) * mapW, cityY - WorldMap.y(home.lat) * mapH)
                     val points = worldMapPoints(origin, mapW)
                     val dot = 2.6.dp.toPx()
-                    onDrawBehind { drawWorldMap(points, Ink.night.copy(alpha = 0.28f), dot) }
+                    onDrawBehind { drawWorldMap(points, Ink.mapDot, dot) }
                 },
         )
         Text(stringResource(R.string.time_zone), style = outfit(13, 500), modifier = Modifier.padding(start = 18.dp, top = 8.dp))
@@ -191,8 +191,8 @@ private fun SunTile(home: City, now: Instant, modifier: Modifier) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.sun), style = outfit(14, 500), modifier = Modifier.weight(1f))
-            Box(Modifier.size(34.dp).background(Ink.lavender, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Sun, null, tint = Ink.purpleDeep, modifier = Modifier.size(17.dp))
+            Box(Modifier.size(34.dp).background(Ink.chipBg, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Sun, null, tint = Ink.accent, modifier = Modifier.size(17.dp))
             }
         }
         if (sun != null) {
@@ -208,7 +208,7 @@ private fun SunTile(home: City, now: Instant, modifier: Modifier) {
                 }
             }
             val light = ChronoUnit.MINUTES.between(rise, set)
-            TileChip(stringResource(R.string.daylight, light / 60, light % 60), Ink.lavender, Ink.night)
+            TileChip(stringResource(R.string.daylight, light / 60, light % 60), Ink.chipBg, Ink.chipFg)
         }
     }
 }
@@ -247,7 +247,7 @@ private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(city.code, style = outfit(if (active) 22 else 15, 500, if (active) Ink.purpleDeep else Ink.text))
+                    Text(city.code, style = outfit(if (active) 22 else 15, 500, if (active) Ink.accent else Ink.text))
                     Text(time, style = outfit(10, color = Ink.muted))
                 }
             }

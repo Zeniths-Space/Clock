@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Light only: the approved design is lavender glass on a pale ground. -->
+    <!-- Light mode: lavender glass on a pale ground (values-night has the AMOLED dark theme). -->
     <style name="Theme.Clock" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_window</item>
         <item name="android:statusBarColor">@android:color/transparent</item>

@@ -81,7 +81,7 @@ fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
     ) {
         Tab.entries.forEach { tab ->
             val on = tab == selected
-            val fill by animateColorAsState(if (on) Ink.text else Color.Transparent, label = "tab")
+            val fill by animateColorAsState(if (on) Ink.chosen else Color.Transparent, label = "tab")
             val tint by animateColorAsState(if (on) Color.White else Ink.text, label = "tab icon")
             val width by animateDpAsState(if (on) 56.dp else 48.dp, label = "tab width")
             Box(
