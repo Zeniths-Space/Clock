@@ -76,7 +76,7 @@ fun ClockApp() {
             Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 22.dp),
+                .padding(bottom = 22.dp),
         )
     }
 }

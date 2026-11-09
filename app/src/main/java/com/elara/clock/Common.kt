@@ -65,34 +65,36 @@ enum class Tab(val icon: ImageVector, val label: Int) {
     STOPWATCH(Icons.Stopwatch, R.string.tab_stopwatch),
 }
 
-/** The floating glass tab bar: icons only, the open tab in a dark pill. Names are read out, not shown. */
+/**
+ * The floating glass tab bar: a small pill centred at the bottom, icons only, the open tab in a dark
+ * (purple in dark mode) pill. Names are read out, not shown.
+ */
 @Composable
 fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(33.dp)
+    val shape = RoundedCornerShape(29.dp)
     Row(
         modifier
-            .fillMaxWidth()
-            .height(66.dp)
+            .height(58.dp)
             .glass(shape, alpha = 0.72f, elevation = 14.dp)
-            .padding(horizontal = 9.dp)
+            .padding(horizontal = 7.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Tab.entries.forEach { tab ->
             val on = tab == selected
             val fill by animateColorAsState(if (on) Ink.chosen else Color.Transparent, label = "tab")
             val tint by animateColorAsState(if (on) Color.White else Ink.text, label = "tab icon")
-            val width by animateDpAsState(if (on) 56.dp else 48.dp, label = "tab width")
+            val width by animateDpAsState(if (on) 54.dp else 44.dp, label = "tab width")
             Box(
                 Modifier
-                    .size(width, 48.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .size(width, 44.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .background(fill)
                     .selectable(selected = on, role = Role.Tab) { onSelect(tab) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(tab.icon, stringResource(tab.label), tint = tint, modifier = Modifier.size(21.dp))
+                Icon(tab.icon, stringResource(tab.label), tint = tint, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -130,4 +132,4 @@ fun PillSwitch(checked: Boolean, onChange: (Boolean) -> Unit, label: String, tra
 }
 
 /** Space the floating tab bar takes at the bottom of each screen, so content can scroll clear of it. */
-val NavBarSpace = 66.dp + 22.dp + 24.dp
+val NavBarSpace = 58.dp + 22.dp + 24.dp
