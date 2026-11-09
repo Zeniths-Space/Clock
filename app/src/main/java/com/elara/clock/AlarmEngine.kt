@@ -30,8 +30,13 @@ object AlarmEngine {
     const val SnoozeMinutes = 10L
     /** Stops ringing after this long, as alarm clocks do, so a forgotten phone does not ring for hours. */
     private const val RingMillis = 10 * 60_000L
-    private const val ChannelVibrate = "alarm"
-    private const val ChannelQuiet = "alarm_no_vibration"
+    /** One channel per sound and vibration choice: Android fixes both per channel. */
+    private enum class Channel(val id: String, val sound: Boolean, val vibrate: Boolean, val label: Int) {
+        BOTH("alarm", true, true, R.string.channel_alarms),
+        SOUND("alarm_no_vibration", true, false, R.string.channel_alarms_quiet),
+        VIBRATE("alarm_vibrate_only", false, true, R.string.channel_alarms_vibrate),
+        SILENT("alarm_silent", false, false, R.string.channel_alarms_silent),
+    }
 
     private val _alarms = MutableStateFlow<List<Alarm>>(emptyList())
     private var loaded = false
@@ -155,7 +160,8 @@ object AlarmEngine {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val time = alarm.time.format(HourMinute)
-        val notification = Notification.Builder(context, if (alarm.vibrate) ChannelVibrate else ChannelQuiet)
+        val channel = Channel.entries.first { it.sound == alarm.sound && it.vibrate == alarm.vibrate }
+        val builder = Notification.Builder(context, channel.id)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(alarm.label.ifBlank { context.getString(R.string.alarm) })
@@ -167,7 +173,8 @@ object AlarmEngine {
             .setOngoing(true)
             .setShowWhen(false)
             .setTimeoutAfter(RingMillis)
-            .addAction(Notification.Action.Builder(null, context.getString(R.string.snooze), action(context, alarm.id, AlarmReceiver.Snooze)).build())
+        if (alarm.snooze) builder.addAction(Notification.Action.Builder(null, context.getString(R.string.snooze), action(context, alarm.id, AlarmReceiver.Snooze)).build())
+        val notification = builder
             .addAction(Notification.Action.Builder(null, context.getString(R.string.dismiss), action(context, alarm.id, AlarmReceiver.Dismiss)).build())
             .build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT // The sound repeats until it is answered.
@@ -194,12 +201,12 @@ object AlarmEngine {
         // On the alarm volume and usage, so it rings with the ringer on silent and through Do not disturb's alarm exception.
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-        for ((id, vibrate) in listOf(ChannelVibrate to true, ChannelQuiet to false)) {
+        for (c in Channel.entries) {
             manager.createNotificationChannel(
-                NotificationChannel(id, context.getString(if (vibrate) R.string.channel_alarms else R.string.channel_alarms_quiet), NotificationManager.IMPORTANCE_HIGH).apply {
-                    setSound(sound, attributes)
-                    enableVibration(vibrate)
-                    if (vibrate) vibrationPattern = longArrayOf(0, 600, 400, 600)
+                NotificationChannel(c.id, context.getString(c.label), NotificationManager.IMPORTANCE_HIGH).apply {
+                    setSound(if (c.sound) sound else null, attributes)
+                    enableVibration(c.vibrate)
+                    if (c.vibrate) vibrationPattern = longArrayOf(0, 600, 400, 600)
                     setBypassDnd(true)
                     lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 },

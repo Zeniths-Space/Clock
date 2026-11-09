@@ -17,8 +17,9 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * One alarm. [days] empty means it rings once, then turns itself off. [snoozedUntil] is epoch millis while a
- * snooze is pending, else 0; it is stored so a snooze survives a reboot.
+ * One alarm. [days] empty means it rings once, then turns itself off. [sound] off rings silently (vibration
+ * and the screen only); [snooze] off leaves only Dismiss. [snoozedUntil] is epoch millis while a snooze is
+ * pending, else 0; it is stored so a snooze survives a reboot.
  */
 data class Alarm(
     val id: Int,
@@ -27,6 +28,8 @@ data class Alarm(
     val label: String = "",
     val on: Boolean = true,
     val vibrate: Boolean = true,
+    val sound: Boolean = true,
+    val snooze: Boolean = true,
     val snoozedUntil: Long = 0,
 ) {
     fun toJson(): JSONObject = JSONObject()
@@ -36,6 +39,8 @@ data class Alarm(
         .put("label", label)
         .put("on", on)
         .put("vibrate", vibrate)
+        .put("sound", sound)
+        .put("snooze", snooze)
         .put("snoozedUntil", snoozedUntil)
 
     companion object {
@@ -46,6 +51,8 @@ data class Alarm(
             label = o.optString("label"),
             on = o.optBoolean("on", true),
             vibrate = o.optBoolean("vibrate", true),
+            sound = o.optBoolean("sound", true),
+            snooze = o.optBoolean("snooze", true),
             snoozedUntil = o.optLong("snoozedUntil"),
         )
 

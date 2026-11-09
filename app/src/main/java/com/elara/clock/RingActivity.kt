@@ -101,7 +101,7 @@ private fun RingScreen(alarm: Alarm, onSnooze: () -> Unit, onDismiss: () -> Unit
         }
         Spacer(Modifier.weight(1.3f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            RingButton(stringResource(R.string.snooze_for, AlarmEngine.SnoozeMinutes), primary = false, Modifier.weight(1f), onSnooze)
+            if (alarm.snooze) RingButton(stringResource(R.string.snooze_for, AlarmEngine.SnoozeMinutes), primary = false, Modifier.weight(1f), onSnooze)
             RingButton(stringResource(R.string.dismiss), primary = true, Modifier.weight(1f), onDismiss)
         }
     }
