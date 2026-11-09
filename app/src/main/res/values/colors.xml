@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The splash screen and window behind the app: the app's pale lavender ground. -->
+    <color name="splash_background">#FFF4F1F9</color>
+</resources>
