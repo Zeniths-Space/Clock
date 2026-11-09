@@ -6,8 +6,9 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
-        <!-- Android 12+ splash screen: the glossy clock alone on the app's pale lavender, no icon tile. -->
+        <!-- Android 12+ splash screen: the clock alone on the app's pale lavender, its hands sweeping to ten past ten. -->
         <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/splash_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/splash_icon</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/splash_animated</item>
+        <item name="android:windowSplashScreenAnimationDuration" tools:targetApi="31">700</item>
     </style>
 </resources>

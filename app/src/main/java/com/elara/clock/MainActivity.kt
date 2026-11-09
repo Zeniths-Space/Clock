@@ -2,6 +2,7 @@ package com.elara.clock
 
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -38,11 +39,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** Android removes its splash at the first frame; keep it a moment, then fade it (Android 12+). */
+/**
+ * Android removes its splash at the app's first frame, which here comes before the hands have finished
+ * sweeping. Keep it until they settle (plus a beat), then fade it (Android 12+; older versions show a still
+ * splash as the window background).
+ */
 private fun ComponentActivity.holdSplash() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     splashScreen.setOnExitAnimationListener { view ->
-        view.animate().alpha(0f).setStartDelay(300).setDuration(250).withEndAction { view.remove() }.start()
+        // The start is on the uptime clock (Android stores SystemClock.uptimeMillis() in it).
+        val start = view.iconAnimationStart?.toEpochMilli() ?: SystemClock.uptimeMillis()
+        val settled = start + (view.iconAnimationDuration?.toMillis() ?: 0L)
+        val wait = (settled - SystemClock.uptimeMillis()).coerceIn(0L, 1000L) + 150L
+        view.animate().alpha(0f).setStartDelay(wait).setDuration(250).withEndAction { view.remove() }.start()
     }
 }
 
