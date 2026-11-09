@@ -2,6 +2,7 @@ package com.elara.clock
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,39 +67,48 @@ enum class Tab(val icon: ImageVector, val label: Int) {
 }
 
 /**
- * The floating glass tab bar: a small pill centred at the bottom, icons only, the open tab in a dark
- * (purple in dark mode) pill. Names are read out, not shown.
+ * The floating glass tab bar: a small pill centred at the bottom, icons only. One dark (purple in dark mode)
+ * pill sits behind the open tab and slides to the next one with a spring. It moves in the layout phase,
+ * so the bar is not recomposed while it slides. Names are read out, not shown.
  */
 @Composable
 fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(29.dp)
-    Row(
+    val slide by animateDpAsState(TabStep * selected.ordinal, spring(dampingRatio = 0.72f, stiffness = 420f), label = "tab pill")
+    Box(
         modifier
             .height(58.dp)
             .glass(shape, alpha = 0.72f, elevation = 14.dp)
-            .padding(horizontal = 7.dp)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 7.dp),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Tab.entries.forEach { tab ->
-            val on = tab == selected
-            val fill by animateColorAsState(if (on) Ink.chosen else Color.Transparent, label = "tab")
-            val tint by animateColorAsState(if (on) Color.White else Ink.text, label = "tab icon")
-            val width by animateDpAsState(if (on) 54.dp else 44.dp, label = "tab width")
-            Box(
-                Modifier
-                    .size(width, 44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(fill)
-                    .selectable(selected = on, role = Role.Tab) { onSelect(tab) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(tab.icon, stringResource(tab.label), tint = tint, modifier = Modifier.size(20.dp))
+        Box(
+            Modifier
+                .offset { IntOffset(slide.roundToPx(), 0) }
+                .size(TabWidth, 44.dp)
+                .background(Ink.chosen, RoundedCornerShape(22.dp)),
+        )
+        Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(TabGap)) {
+            Tab.entries.forEach { tab ->
+                val on = tab == selected
+                val tint by animateColorAsState(if (on) Color.White else Ink.text, label = "tab icon")
+                Box(
+                    Modifier
+                        .size(TabWidth, 44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .selectable(selected = on, role = Role.Tab) { onSelect(tab) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(tab.icon, stringResource(tab.label), tint = tint, modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
 }
+
+private val TabWidth = 50.dp
+private val TabGap = 2.dp
+private val TabStep = TabWidth + TabGap
 
 /** A round glass button with an icon, 44 dp. */
 @Composable
