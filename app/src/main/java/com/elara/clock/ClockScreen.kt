@@ -115,36 +115,44 @@ private val MM = DateTimeFormatter.ofPattern("mm")
 @Composable
 private fun TimeZoneStrip(home: City, now: Instant) {
     val utc = utcLabel(home.zone, now)
-    Box(Modifier.width(130.dp).fillMaxHeight().clearAndSetSemantics { contentDescription = utc }) {
+    // Everything is centred on one vertical line down the middle of the strip: the label above it, the
+    // city's dot on it (at the city's place on the map), and the UTC offset below it.
+    Box(Modifier.width(StripWidth).fillMaxHeight().clearAndSetSemantics { contentDescription = utc }) {
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(vertical = 24.dp)
+                .padding(vertical = MapInset)
                 .clipToBounds()
                 .drawWithCache {
-                    // The map at 900 dp wide (as in the design), slid so the city sits on the line, 66 dp in.
+                    // The map at 900 dp wide (as in the design), slid so the city sits on the line.
                     val mapW = 900.dp.toPx()
                     val mapH = mapW / WorldMap.ASPECT
-                    val cityY = 99.dp.toPx()
-                    val origin = Offset(66.dp.toPx() - WorldMap.x(home.lon) * mapW, cityY - WorldMap.y(home.lat) * mapH)
+                    val origin = Offset(size.width / 2 - WorldMap.x(home.lon) * mapW, (CityY - MapInset).toPx() - WorldMap.y(home.lat) * mapH)
                     val points = worldMapPoints(origin, mapW)
                     val dot = 2.6.dp.toPx()
                     onDrawBehind { drawWorldMap(points, Ink.mapDot, dot) }
                 },
         )
-        Text(stringResource(R.string.time_zone), style = sans(13, 500), modifier = Modifier.padding(start = 18.dp, top = 8.dp))
-        Box(Modifier.padding(start = 66.dp, top = 36.dp, bottom = 36.dp).width(1.dp).fillMaxHeight().background(Ink.text))
+        Text(stringResource(R.string.time_zone), style = sans(13, 500), modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
+        Box(Modifier.align(Alignment.TopCenter).padding(top = 36.dp, bottom = 36.dp).width(1.dp).fillMaxHeight().background(Ink.text))
         Box(
             Modifier
-                .padding(start = 59.dp, top = 116.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = CityY - 12.5.dp)
                 .size(25.dp)
                 .background(Ink.purple.copy(alpha = 0.22f), CircleShape)
                 .padding(5.dp)
                 .background(Ink.purple, CircleShape),
         )
-        Text(utc, style = smallText(12, Ink.text), modifier = Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 8.dp))
+        Text(utc, style = smallText(12, Ink.text), modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
     }
 }
+
+private val StripWidth = 130.dp
+/** The map is drawn this far in from the strip's top and bottom. */
+private val MapInset = 24.dp
+/** How far down the strip the city (its dot on the line) sits. */
+private val CityY = 123.dp
 
 private val DayName = DateTimeFormatter.ofPattern("EEE,")
 private val DayMonth = DateTimeFormatter.ofPattern("d MMMM")
