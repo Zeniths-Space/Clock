@@ -10,10 +10,10 @@ the background. The timer and stopwatch count only while the app is open.
 ## Screens
 
 It follows the system theme. Light is lavender glass on a pale ground: frosted white cards, the
-brand purple ramp for the main tiles and buttons, thin oversized digits (Outfit) and small mono
-labels (JetBrains Mono). Dark is AMOLED, like every Elara app: a black page, #141414 cards with a
+brand purple ramp for the main tiles and buttons, thin oversized digits and small spaced-out labels,
+all in the phone's own font. Dark is AMOLED, like every Elara app: a black page, #141414 cards with a
 #1F1F1F edge, white text and #B69CFF purple text. A small floating tab bar sits centred at the
-bottom, icons only; the open tab is in a dark pill (purple in dark mode).
+bottom, icons only; a dark pill (purple in dark mode) marks the open tab and slides to the next.
 
 - **Clock**: your city's time in huge thin digits, beside a line through your time zone on a dotted
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
@@ -47,11 +47,6 @@ when the Gradle property `elaraClockSigning` points to a `keystore.properties` f
 The app icon is generated: edit and run `python3 tools/icon.py`. It is a clock face filling the icon
 (hands at ten past ten). The script also writes the face and each hand as their own drawables, which
 the launcher activity names in its meta-data, so Elara Launcher can show the live time on the icon.
-
-## Fonts
-
-Outfit and JetBrains Mono are bundled under the SIL Open Font License 1.1; the licences are in
-[docs/licenses](docs/licenses).
 
 ## Documentation
 
