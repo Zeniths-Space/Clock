@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.foundation.layout.Box
@@ -43,6 +40,8 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,9 +67,8 @@ fun WorldScreen(modifier: Modifier = Modifier) {
     val chosen = Cities.chosen(context)
     val others = chosen.filterNot { it.same(home) }
     // The city map: open with a city to show it, or with your own city to add one.
-    var mapOpen by rememberSaveable { mutableStateOf(false) }
-    var mapFocus by remember { mutableStateOf<City?>(null) }
-    val openMap = { city: City? -> mapFocus = city; mapOpen = true }
+    val cityMap = LocalCityMap.current
+    val openMap = { city: City? -> cityMap.show(city) }
     val homeDate = now.atZone(home.zone).toLocalDate()
     // At least the screen's height, so the empty state can sit in the middle of the space under the map.
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -147,7 +145,6 @@ fun WorldScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-    if (mapOpen) CityMap(mapFocus, onClose = { mapOpen = false })
     }
 }
 
@@ -175,6 +172,8 @@ private fun MapCard(home: City, others: List<City>, now: java.time.Instant, twen
             .height(214.dp)
             .shadow(18.dp, shape, ambientColor = Ink.text.copy(alpha = 0.3f), spotColor = Ink.text.copy(alpha = 0.3f))
             .clip(shape)
+            // Kept as a picture: the land and its pins change once a minute, not every frame something moves.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
                 val sky = Brush.linearGradient(listOf(Ink.night, Ink.nightDeep), Offset(0f, 0f), Offset(size.width * 0.3f, size.height))
                 val glow = Brush.radialGradient(listOf(Color(0xFF4A2BB0), Color(0x004A2BB0)), Offset(size.width * 0.7f, 0f), size.width * 0.8f)

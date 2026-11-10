@@ -32,7 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -66,9 +68,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,29 +75,50 @@ import kotlinx.coroutines.withContext
 import java.text.Normalizer
 import java.time.Instant
 
+/**
+ * City names measured once per process (keyed by density, font scale and theme), not on every open of the
+ * map: measuring them all made the map's first frame 12-14 ms longer each time. A few hundred entries.
+ */
+private val LabelLayouts = HashMap<String, androidx.compose.ui.text.TextLayoutResult>()
+
 /** Map degrees: x = lon + 180 (0 to 360), y = 80 - lat (0 to 140), the frame of [Land]. */
 private fun City.spot() = Offset((lon + 180).toFloat(), (WorldMap.NORTH - lat).toFloat())
 
+/** Which city map is open, if any: kept by [ClockApp], which draws the map over every tab and the tab bar. */
+class CityMapState {
+    var open by mutableStateOf(false)
+        private set
+    var focus by mutableStateOf<City?>(null)
+        private set
+
+    /** Opens the map on [city], or on your own city to add one when null. */
+    fun show(city: City?) { focus = city; open = true }
+    fun close() { open = false }
+}
+
+val LocalCityMap = compositionLocalOf { CityMapState() }
+
 /**
- * The city map, full screen: the world in dots, zoomed in on [focus] (or your own city), with every city the
- * app knows as a dot you can tap. Drag to move, pinch or double-tap to zoom. The header has Back, a search
- * that flies the map to a city, and Remove when the chosen city is in your world clock; the card at the
- * bottom shows the chosen city's time and adds it.
+ * The city map, full screen: the world in solid land, zoomed in on [focus] (or your own city), with every
+ * city the app knows as a dot you can tap. Drag to move, pinch or double-tap to zoom. The header has Back, a
+ * search that flies the map to a city, and Remove when the chosen city is in your world clock; the card at
+ * the bottom shows the chosen city's time and adds it. Drawn in the app's own window, not a dialog: making
+ * a new window cost about 100 ms on every open.
  */
 @Composable
 fun CityMap(focus: City?, onClose: () -> Unit) {
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        // The page is night blue in both themes, so the status bar icons stay light.
-        val view = LocalView.current
-        SideEffect {
-            (view.parent as? DialogWindowProvider)?.window?.let { window ->
-                window.setDimAmount(0f)
-                WindowCompat.getInsetsController(window, view).apply {
-                    isAppearanceLightStatusBars = false
-                    isAppearanceLightNavigationBars = false
-                }
-            }
-        }
+    BackHandler(onBack = onClose)
+    // The page is night blue in both themes, so the status bar icons stay light while it is open.
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val window = (view.context as? android.app.Activity)?.window
+        val bars = window?.let { WindowCompat.getInsetsController(it, view) }
+        val wasLight = bars?.isAppearanceLightStatusBars
+        bars?.isAppearanceLightStatusBars = false
+        onDispose { if (wasLight != null) bars.isAppearanceLightStatusBars = wasLight }
+    }
+    // Takes every touch and hides the tabs below from TalkBack.
+    Box(Modifier.fillMaxSize().pointerInput(Unit) {}.semantics { isTraversalGroup = true }) {
         CityMapPage(focus, onClose)
     }
 }
@@ -156,8 +176,8 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
         val majorEnd = remember(ranked) { ranked.indexOfLast { it.major }.coerceAtLeast(mineCount - 1) + 1 }
         val rankedSpots = remember(ranked) { ranked.map { it.spot() } }
         val measurer = rememberTextMeasurer(cacheSize = 8)
-        val layouts = remember(ranked) { HashMap<String, androidx.compose.ui.text.TextLayoutResult>() }
         val dp = androidx.compose.ui.platform.LocalDensity.current.density
+        val labelKey = "$dp/${androidx.compose.ui.platform.LocalDensity.current.fontScale}/${Ink.dark}/"
         val labelStyle = TextStyle(fontSize = 11.sp, color = Ink.lavender)
         val chosenStyle = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Medium)
 
@@ -210,7 +230,7 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
 
             val taken = mutableListOf<Rect>(Rect(sel, 18 * dp))
             fun label(c: City, p: Offset, isSel: Boolean, mine: Boolean): Boolean {
-                val layout = layouts.getOrPut(c.name + c.zone.id + isSel) {
+                val layout = LabelLayouts.getOrPut(labelKey + c.name + c.zone.id + isSel + mine) {
                     measurer.measure(c.name, if (isSel || mine) chosenStyle.copy(fontSize = if (isSel) 14.sp else 12.sp) else labelStyle)
                 }
                 val size = androidx.compose.ui.geometry.Size(layout.size.width.toFloat(), layout.size.height.toFloat())

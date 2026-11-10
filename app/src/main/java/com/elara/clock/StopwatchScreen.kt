@@ -43,8 +43,11 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
     val laps = remember { mutableStateListOf<Long>() }
     val running = startedAt != 0L
     var frame by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    LaunchedEffect(running) {
-        while (running) withFrameMillis { frame = SystemClock.elapsedRealtime() }
+    // Every frame while running and on screen; hidden behind another tab it keeps time without drawing.
+    val shown = LocalTabShown.current
+    LaunchedEffect(running, shown) {
+        if (running && shown) frame = SystemClock.elapsedRealtime()
+        while (running && shown) withFrameMillis { frame = SystemClock.elapsedRealtime() }
     }
     val ms = if (running) (frame - startedAt).coerceAtLeast(0) else heldMs
 
