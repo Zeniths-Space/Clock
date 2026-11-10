@@ -1,7 +1,6 @@
 package com.elara.clock
 
 import android.os.SystemClock
-import android.text.format.DateFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -60,7 +59,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Heavy stacked digits, one per row, as in the design. */
-val RowDigits = sans(132, weight = 700, spacing = -8f)
+val RowDigits get() = sans(132, weight = 700, spacing = -8f)
 
 private val Presets = listOf(1, 3, 5, 10, 15, 25, 45)
 
@@ -101,7 +100,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.tab_timer), style = sans(22, 500))
-                Text(stringResource(R.string.timer_ends, ends.hm(DateFormat.is24HourFormat(LocalContext.current)), clockText(durationMs / 1000)), style = smallText(11))
+                Text(stringResource(R.string.timer_ends, ends.hm(rememberTwentyFour()), clockText(durationMs / 1000)), style = smallText(11))
             }
             GlassIconButton(Icons.List, stringResource(R.string.timer_list))
         }

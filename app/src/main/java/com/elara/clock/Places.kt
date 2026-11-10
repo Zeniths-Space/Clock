@@ -75,10 +75,16 @@ object Cities {
     private fun prefs(context: Context) = context.getSharedPreferences("world", Context.MODE_PRIVATE)
 
     /**
-     * The phone's own city: one of [chosen] in its time zone, else the catalog's city for that zone, else one
+     * Your home city: the one chosen in Settings, else the phone's own city: one of [chosen] in its time zone, else the catalog's city for that zone, else one
      * named after the zone at its offset's longitude.
      */
     fun home(context: Context, zone: ZoneId = ZoneId.systemDefault()): City {
+        Settings.get(context).homeCity?.let(City::fromLine)?.let { return it }
+        return phone(context, zone)
+    }
+
+    /** The phone's own city, whatever Settings says: see [home]. */
+    fun phone(context: Context, zone: ZoneId = ZoneId.systemDefault()): City {
         fun City.inZone() = this.zone.normalized() == zone.normalized() || this.zone.id == zone.id
         return chosen(context).firstOrNull { it.inZone() }
             ?: catalog(context).firstOrNull { it.zone.id == zone.id }

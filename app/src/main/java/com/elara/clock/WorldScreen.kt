@@ -1,6 +1,5 @@
 package com.elara.clock
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.heightIn
@@ -62,8 +61,8 @@ import kotlin.math.roundToInt
 fun WorldScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val now by rememberNow()
-    val home = remember { Cities.home(context) }
-    val twentyFour = DateFormat.is24HourFormat(context)
+    val home = remember(Settings.get(context).homeCity) { Cities.home(context) }
+    val twentyFour = rememberTwentyFour()
     val chosen = Cities.chosen(context)
     val others = chosen.filterNot { it.same(home) }
     // The city map: open with a city to show it, or with your own city to add one.

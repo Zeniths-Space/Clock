@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -143,7 +144,7 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
                     Divider()
                     SwitchRow(
                         stringResource(R.string.snooze),
-                        if (snooze) stringResource(R.string.snooze_setting, AlarmEngine.SnoozeMinutes) else stringResource(R.string.off),
+                        if (snooze) stringResource(R.string.snooze_setting, Settings.get(LocalContext.current).snoozeMinutes) else stringResource(R.string.off),
                         snooze,
                     ) { snooze = it }
                 }
@@ -352,7 +353,7 @@ private fun NameField(value: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-private fun SwitchRow(title: String, value: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, value: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -369,7 +370,7 @@ private fun SwitchRow(title: String, value: String, checked: Boolean, onChange: 
 }
 
 @Composable
-private fun Divider() {
+internal fun Divider() {
     Box(Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(1.dp).background(Ink.line))
 }
 

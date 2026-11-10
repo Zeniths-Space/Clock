@@ -51,7 +51,17 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.auto(Color.Transparent.toArgb(), Color.Transparent.toArgb()),
         )
         if (savedInstanceState == null) asked = tabFor(intent)
-        setContent { ElaraTheme { ClockApp(asked) { asked = null } } }
+        setContent {
+            val dark = appIsDark()
+            // Status and navigation bar icons follow the app's theme, which the setting may set apart from the phone's.
+            LaunchedEffect(dark) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(Color.Transparent.toArgb(), Color.Transparent.toArgb()) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(Color.Transparent.toArgb(), Color.Transparent.toArgb()) { dark },
+                )
+            }
+            ElaraTheme(dark) { ClockApp(asked) { asked = null } }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -117,7 +127,7 @@ fun ClockApp(asked: Tab? = null, onAskedShown: () -> Unit = {}) {
                 .padding(bottom = 22.dp),
         )
         overlay.Show()
-        if (cityMap.open) CityMap(cityMap.focus, onClose = cityMap::close)
+        if (cityMap.open) CityMap(cityMap.focus, onClose = cityMap::close, pickingHome = cityMap.pickingHome)
     }
 }
 

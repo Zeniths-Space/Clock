@@ -2,7 +2,6 @@ package com.elara.clock
 
 import android.os.Build
 import android.os.Bundle
-import android.text.format.DateFormat
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -93,7 +92,7 @@ private fun RingScreen(alarm: Alarm, onSnooze: () -> Unit, onDismiss: () -> Unit
         Text(title, style = sans(30, 500), textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.ringing), style = smallText(12, Ink.accent), modifier = Modifier.padding(top = 6.dp))
         Spacer(Modifier.height(24.dp))
-        val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
+        val twentyFour = rememberTwentyFour()
         val time = here.hm(twentyFour)
         Column(Modifier.semantics(mergeDescendants = true) { contentDescription = time }, horizontalAlignment = Alignment.CenterHorizontally) {
             Digits(here.format(if (twentyFour) H else H12), sans(150, 200, Ink.lilac, spacing = -8f), 130.dp)
@@ -101,7 +100,7 @@ private fun RingScreen(alarm: Alarm, onSnooze: () -> Unit, onDismiss: () -> Unit
         }
         Spacer(Modifier.weight(1.3f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (alarm.snooze) RingButton(stringResource(R.string.snooze_for, AlarmEngine.SnoozeMinutes), primary = false, Modifier.weight(1f), onSnooze)
+            if (alarm.snooze) RingButton(stringResource(R.string.snooze_for, Settings.get(LocalContext.current).snoozeMinutes), primary = false, Modifier.weight(1f), onSnooze)
             RingButton(stringResource(R.string.dismiss), primary = true, Modifier.weight(1f), onDismiss)
         }
     }

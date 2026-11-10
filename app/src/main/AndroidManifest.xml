@@ -13,6 +13,10 @@
         android:maxSdkVersion="32" />
     <!-- Sets the alarms again after a restart: Android forgets them. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Gradual volume: the app plays a rising alarm sound itself, in a service that runs only while it rings. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".ClockApplication"
@@ -49,6 +53,11 @@
             android:turnScreenOn="true" />
 
         <!-- An alarm going off, Snooze and Dismiss: only this app's PendingIntents reach it. -->
+        <service
+            android:name=".AlarmRingService"
+            android:directBootAware="true"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted" />
         <receiver
             android:name=".AlarmReceiver"
             android:directBootAware="true"

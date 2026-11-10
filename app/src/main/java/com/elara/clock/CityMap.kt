@@ -1,6 +1,5 @@
 package com.elara.clock
 
-import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -90,9 +89,15 @@ class CityMapState {
         private set
     var focus by mutableStateOf<City?>(null)
         private set
+    /** True when the map picks your home city (from Settings) instead of adding cities. */
+    var pickingHome by mutableStateOf(false)
+        private set
 
     /** Opens the map on [city], or on your own city to add one when null. */
-    fun show(city: City?) { focus = city; open = true }
+    fun show(city: City?) { focus = city; pickingHome = false; open = true }
+
+    /** Opens the map to choose your home city. */
+    fun pickHome(city: City) { focus = city; pickingHome = true; open = true }
     fun close() { open = false }
 }
 
@@ -106,7 +111,7 @@ val LocalCityMap = compositionLocalOf { CityMapState() }
  * a new window cost about 100 ms on every open.
  */
 @Composable
-fun CityMap(focus: City?, onClose: () -> Unit) {
+fun CityMap(focus: City?, onClose: () -> Unit, pickingHome: Boolean = false) {
     BackHandler(onBack = onClose)
     // The page is night blue in both themes, so the status bar icons stay light while it is open.
     val view = LocalView.current
@@ -119,22 +124,22 @@ fun CityMap(focus: City?, onClose: () -> Unit) {
     }
     // Takes every touch and hides the tabs below from TalkBack.
     Box(Modifier.fillMaxSize().pointerInput(Unit) {}.semantics { isTraversalGroup = true }) {
-        CityMapPage(focus, onClose)
+        CityMapPage(focus, onClose, pickingHome)
     }
 }
 
 @Composable
-private fun CityMapPage(focus: City?, onClose: () -> Unit) {
+private fun CityMapPage(focus: City?, onClose: () -> Unit, pickingHome: Boolean) {
     val context = LocalContext.current
     val catalog by produceState(emptyList<City>()) { value = withContext(Dispatchers.IO) { Cities.catalog(context) } }
     val land by produceState(Land.loaded()) { value = withContext(Dispatchers.IO) { Land.load(context) } }
-    val home = remember { Cities.home(context) }
+    val home = remember(Settings.get(context).homeCity) { Cities.home(context) }
     val chosen = Cities.chosen(context)
     var selected by remember { mutableStateOf(focus ?: home) }
     var query by remember { mutableStateOf("") }
     var removing by remember { mutableStateOf(false) }
     val now by rememberNow()
-    val twentyFour = DateFormat.is24HourFormat(context)
+    val twentyFour = rememberTwentyFour()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     BackHandler(query.isNotEmpty()) { query = ""; focusManager.clearFocus() }
@@ -295,7 +300,7 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 GlassIconButton(Icons.Back, stringResource(R.string.back), size = 48.dp, iconSize = 20.dp, onClick = onClose)
                 SearchPill(query, Modifier.weight(1f)) { query = it.take(40) }
-                if (chosen.any { it.same(selected) } && !selected.same(home)) {
+                if (!pickingHome && chosen.any { it.same(selected) } && !selected.same(home)) {
                     GlassIconButton(Icons.Trash, stringResource(R.string.remove), size = 48.dp, iconSize = 20.dp) { removing = true }
                 }
             }
@@ -330,9 +335,14 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
         CityCard(
             selected, home, now, twentyFour,
             added = chosen.any { it.same(selected) },
+            pickingHome = pickingHome,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding().padding(16.dp),
         ) {
-            Cities.add(context, selected)
+            if (pickingHome) {
+                Settings.update(context) { it.copy(homeCity = selected.toLine()) }
+            } else {
+                Cities.add(context, selected)
+            }
             onClose()
         }
     }
@@ -388,7 +398,7 @@ private fun SearchPill(value: String, modifier: Modifier, onChange: (String) -> 
 
 /** The chosen city: its name, zone, the time there against yours, and Add (or where it already is). */
 @Composable
-private fun CityCard(city: City, home: City, now: Instant, twentyFour: Boolean, added: Boolean, modifier: Modifier, onAdd: () -> Unit) {
+private fun CityCard(city: City, home: City, now: Instant, twentyFour: Boolean, added: Boolean, pickingHome: Boolean, modifier: Modifier, onAdd: () -> Unit) {
     val there = now.atZone(city.zone)
     val diff = offsetBetween(home.zone, city.zone, now)
     val day = there.toLocalDate().compareTo(now.atZone(home.zone).toLocalDate()).let {
@@ -412,6 +422,7 @@ private fun CityCard(city: City, home: City, now: Instant, twentyFour: Boolean, 
         }
         when {
             city.same(home) -> {}
+            pickingHome -> PillButton(stringResource(R.string.set_home_named, city.name), primary = true, Modifier.padding(top = 16.dp).fillMaxWidth(), onClick = onAdd)
             added -> Text(
                 stringResource(R.string.in_world_clock),
                 style = sans(15, 500, Ink.muted),

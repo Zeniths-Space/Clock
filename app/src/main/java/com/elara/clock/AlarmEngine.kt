@@ -27,9 +27,8 @@ import java.time.ZonedDateTime
  */
 object AlarmEngine {
     private const val FileName = "alarms.json"
-    const val SnoozeMinutes = 10L
-    /** Stops ringing after this long, as alarm clocks do, so a forgotten phone does not ring for hours. */
-    private const val RingMillis = 10 * 60_000L
+    // Snooze length and how long an alarm rings before it stops (so a forgotten phone does not ring for
+    // hours) come from Settings.
     /** One channel per sound and vibration choice: Android fixes both per channel. */
     private enum class Channel(val id: String, val sound: Boolean, val vibrate: Boolean, val label: Int) {
         BOTH("alarm", true, true, R.string.channel_alarms),
@@ -81,6 +80,7 @@ object AlarmEngine {
     fun save(context: Context, alarm: Alarm) = update(context) { list -> list.filter { it.id != alarm.id } + alarm.copy(snoozedUntil = 0) }
 
     fun delete(context: Context, id: Int) {
+        AlarmRingService.stop(context)
         notifications(context).cancel(notificationId(id))
         // Scheduling only covers alarms still in the list, so a deleted one's wake-up is cancelled here.
         context.getSystemService(AlarmManager::class.java).cancel(ringIntent(context, id))
@@ -137,21 +137,39 @@ object AlarmEngine {
     }
 
     fun snooze(context: Context, id: Int) {
+        AlarmRingService.stop(context)
         notifications(context).cancel(notificationId(id))
-        val until = System.currentTimeMillis() + SnoozeMinutes * 60_000
+        val until = System.currentTimeMillis() + Settings.get(context).snoozeMinutes * 60_000L
         update(context) { list -> list.map { if (it.id == id) it.copy(on = true, snoozedUntil = until) else it } }
     }
 
     fun dismiss(context: Context, id: Int) {
+        AlarmRingService.stop(context)
         notifications(context).cancel(notificationId(id))
         update(context) { list -> list.map { if (it.id == id && it.snoozedUntil != 0L) it.copy(snoozedUntil = 0, on = it.days.isNotEmpty()) else it } }
+    }
+
+    /** The ring time in Settings ran out while the app played the sound itself: stop, as the notification would. */
+    fun timedOut(context: Context, id: Int) {
+        AlarmRingService.stop(context)
+        notifications(context).cancel(notificationId(id))
+    }
+
+    /** The app could not play a rising sound for alarm [id]: ring through its notification instead. */
+    fun ringWithoutRamp(context: Context, id: Int) {
+        load(context)
+        _alarms.value.firstOrNull { it.id == id }?.let { show(context, it, ramp = false) }
     }
 
     private fun notificationId(id: Int) = 1000 + id
 
     private fun notifications(context: Context) = context.getSystemService(NotificationManager::class.java)
 
-    private fun show(context: Context, alarm: Alarm) {
+    /**
+     * Shows the ringing notification. With gradual volume ([ramp]) the notification only vibrates and
+     * [AlarmRingService] plays the rising sound; if Android will not start it, the alarm rings the plain way.
+     */
+    private fun show(context: Context, alarm: Alarm, ramp: Boolean = alarm.sound && Settings.get(context).gradualVolume) {
         val manager = notifications(context)
         createChannels(context, manager)
         val full = PendingIntent.getActivity(
@@ -160,7 +178,7 @@ object AlarmEngine {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val time = alarm.time.format(HourMinute)
-        val channel = Channel.entries.first { it.sound == alarm.sound && it.vibrate == alarm.vibrate }
+        val channel = Channel.entries.first { it.sound == (alarm.sound && !ramp) && it.vibrate == alarm.vibrate }
         val builder = Notification.Builder(context, channel.id)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF7C4DFF.toInt())
@@ -172,12 +190,16 @@ object AlarmEngine {
             .setContentIntent(full)
             .setOngoing(true)
             .setShowWhen(false)
-            .setTimeoutAfter(RingMillis)
+            .setTimeoutAfter(Settings.get(context).ringMinutes * 60_000L)
         if (alarm.snooze) builder.addAction(Notification.Action.Builder(null, context.getString(R.string.snooze), action(context, alarm.id, AlarmReceiver.Snooze)).build())
         val notification = builder
             .addAction(Notification.Action.Builder(null, context.getString(R.string.dismiss), action(context, alarm.id, AlarmReceiver.Dismiss)).build())
             .build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT // The sound repeats until it is answered.
+        if (ramp) {
+            if (AlarmRingService.start(context, alarm.id, notification)) return
+            return show(context, alarm, ramp = false)
+        }
         manager.notify(notificationId(alarm.id), notification)
     }
 

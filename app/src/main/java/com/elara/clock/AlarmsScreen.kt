@@ -1,6 +1,5 @@
 package com.elara.clock
 
-import android.text.format.DateFormat
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -68,7 +67,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-private val HeroDigits = sans(112, weight = 600, spacing = -6f)
+private val HeroDigits get() = sans(112, weight = 600, spacing = -6f)
 
 /** [AlarmSheet] open for a new alarm. */
 private const val NewAlarm = -1
@@ -81,9 +80,7 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val now by rememberNow()
     val zone = remember { ZoneId.systemDefault() }
-    var twentyFour by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    val systemTwentyFour = DateFormat.is24HourFormat(context)
-    val use24 = twentyFour ?: systemTwentyFour
+    val use24 = rememberTwentyFour()
     val alarms by remember { AlarmEngine.alarms(context) }.collectAsState()
     val here = now.atZone(zone)
     val next = AlarmEngine.next(alarms, here)
@@ -125,7 +122,7 @@ fun AlarmsScreen(modifier: Modifier = Modifier) {
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.tab_alarms), style = sans(30, 500, spacing = -0.5f), modifier = Modifier.weight(1f))
-                FormatSwitch(use24) { twentyFour = it }
+                FormatSwitch(use24) { on -> com.elara.clock.Settings.update(context) { it.copy(timeFormat = if (on) TimeFormat.H24 else TimeFormat.H12) } }
             }
             problem?.let { WarningCard(it) { context.openFix(it) } }
             if (alarms.isEmpty()) {
