@@ -138,7 +138,9 @@ fun TimerScreen(modifier: Modifier = Modifier) {
                 if (running) {
                     leftMs = (endsAt - SystemClock.elapsedRealtime()).coerceAtLeast(0); endsAt = 0
                 } else if (leftMs > 0) {
-                    endsAt = SystemClock.elapsedRealtime() + leftMs
+                    // Set tick too, or the first frame shows endsAt minus an old tick: a jump, then the real time.
+                    tick = SystemClock.elapsedRealtime()
+                    endsAt = tick + leftMs
                 }
             }
             val addLabel = stringResource(R.string.add_minute)

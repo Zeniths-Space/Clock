@@ -81,7 +81,8 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
                 if (running) {
                     heldMs = SystemClock.elapsedRealtime() - startedAt; startedAt = 0
                 } else {
-                    startedAt = SystemClock.elapsedRealtime() - heldMs
+                    frame = SystemClock.elapsedRealtime() // Else the first frame uses an old frame time and jumps.
+                    startedAt = frame - heldMs
                 }
             }
         }
