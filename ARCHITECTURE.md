@@ -27,6 +27,12 @@ outlines rather than from Android's glyph cache, so `Digits`, the Clock page's d
 page's map card each draw into a kept layer (`CompositingStrategy.Offscreen`) and are not drawn again
 while nothing in them changes. Tab switching went from 6-7% to 2-2.5% janky frames (legacy count),
 the city map opens in about 60-75 ms instead of 165 ms.
+
+- `Overlay.kt`: content drawn over the whole app in the activity's own window (`Overlay`, hosted by
+  `ClockApp`), and `ElaraSheet`, the Elara bottom sheet built on it (dimmed backdrop, slides up, no drag,
+  Back or a tap outside closes, rises above the keyboard). Material's `ModalBottomSheet` opens a new window
+  each time, which made opening the alarm sheet take about 150 ms over three frames at 60 Hz; it now
+  takes one frame of about 55 ms (building the form and its time wheels), then slides.
 - `WorldMap.kt`: the dotted map from a coarse hand-made land mask (the Clock page's time-zone strip),
   drawn in one `drawPoints` call; `Land`, the solid land shapes (coarse and tiled) for the World page and
   the city map; and `nightShade`, the night side as a shape.
