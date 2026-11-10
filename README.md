@@ -7,10 +7,8 @@ Application ID `com.elara.clock`.
 and are added and edited in a sheet. The timer keeps running with the app closed: its notification counts
 down, and it rings like an alarm when it ends. The stopwatch still counts only while the app is open.
 
-The timer notification asks Android to make it a Live Update (Android 16 QPR1 and later), which shows
-as a countdown chip in the status bar. One UI decides whether to allow it. On the test phone (SM-S928B,
-One UI 9) it was not allowed by default, and Good Lock's QuickStar "hide ongoing chip" hides the chip
-anyway, also for Samsung's own Clock.
+No status-bar chip: One UI does not give one to third-party apps by default, and on the test phone
+(SM-S928B, One UI 9) Good Lock's QuickStar hides it even for Samsung's own Clock.
 
 ## Alarms
 

@@ -2,4 +2,6 @@
 <resources>
     <!-- Dark mode: the splash and the window behind the app are AMOLED black. -->
     <color name="splash_background">#FF000000</color>
+    <!-- The timer notification's countdown: purple for text on dark. -->
+    <color name="notification_time">#FFB69CFF</color>
 </resources>

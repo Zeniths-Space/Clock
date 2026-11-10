@@ -2,4 +2,6 @@
 <resources>
     <!-- The splash screen and window behind the app: the app's pale lavender ground. -->
     <color name="splash_background">#FFF4F1F9</color>
+    <!-- The timer notification's countdown: brand purple. -->
+    <color name="notification_time">#FF7C4DFF</color>
 </resources>

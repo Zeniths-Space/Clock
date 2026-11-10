@@ -8,8 +8,10 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.SystemClock
+import android.text.format.DateUtils
+import android.view.View
+import android.widget.RemoteViews
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 
@@ -32,8 +34,7 @@ data class TimerState(
 /**
  * The timer outside the screen. Its state lives in device-protected storage, so it survives the app being
  * closed and the phone restarting. While it runs, an exact alarm is set for its end and an ongoing notification
- * counts down by itself (Android draws the chronometer; no app code runs each second). On Android 16 QPR1+ the
- * notification asks to be a Live Update, which One UI shows as a chip in the status bar. When it ends, it rings
+ * counts down by itself (Android draws the chronometer; no app code runs each second). When it ends, it rings
  * like an alarm: full screen, on the alarm volume, until stopped or the ring time in Settings runs out.
  */
 object TimerEngine {
@@ -110,11 +111,17 @@ object TimerEngine {
             Intent(context, RingActivity::class.java).putExtra(RingActivity.Timer, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        // Counts up from the end, as "−00:12", so a late look shows how long ago it went off.
+        val info = context.getString(R.string.timer_of, durationText(context, s.durationMs))
         val notification = Notification.Builder(context, AlarmEngine.RingChannel)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(context.getString(R.string.timer_done))
-            .setContentText(clockText(s.durationMs / 1000))
+            .setContentText(info)
+            .setSubText(context.getString(R.string.timer_done))
+            .setStyle(Notification.DecoratedCustomViewStyle())
+            .setCustomContentView(timeView(context, R.layout.notification_timer, s.endsAt, countDown = false, info))
+            .setCustomBigContentView(timeView(context, R.layout.notification_timer_big, s.endsAt, countDown = false, info))
             .setCategory(Notification.CATEGORY_ALARM)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setFullScreenIntent(full, true)
@@ -122,7 +129,8 @@ object TimerEngine {
             .setOngoing(true)
             .setShowWhen(false)
             .setTimeoutAfter(Settings.get(context).ringMinutes * 60_000L)
-            .addAction(Notification.Action.Builder(null, context.getString(R.string.stop), action(context, TimerReceiver.Stop)).build())
+            .addAction(button(context, R.string.stop, TimerReceiver.Stop))
+            .addAction(button(context, R.string.restart, TimerReceiver.Restart))
             .build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT
         manager.notify(RingId, notification)
@@ -149,42 +157,76 @@ object TimerEngine {
     private fun showOngoing(context: Context, s: TimerState) {
         val manager = notifications(context)
         if (!s.running && !s.paused) return manager.cancel(OngoingId)
-        // Low importance: shows without a sound or a pop-up. Not MIN, which a Live Update may not use.
+        // Low importance: shows without a sound or a pop-up.
         manager.createNotificationChannel(NotificationChannel(OngoingChannel, context.getString(R.string.channel_timer), NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(
             context, OngoingId,
             Intent(context, MainActivity::class.java).putExtra(MainActivity.OpenTimer, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val left = s.left()
+        val info = if (s.running) {
+            context.getString(R.string.timer_ends_at, java.time.ZonedDateTime.now().plusNanos(left * 1_000_000).hm(Settings.twentyFour(context)))
+        } else {
+            context.getString(R.string.timer_paused)
+        } + " · " + context.getString(R.string.timer_of, durationText(context, s.durationMs))
+        // Running: Android counts the Chronometer down by itself. Paused: the time left as plain text.
+        val end = if (s.running) s.endsAt else null
         val builder = Notification.Builder(context, OngoingChannel)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(context.getString(R.string.tab_timer))
+            .setContentText(info)
+            .setSubText(context.getString(R.string.tab_timer))
+            .setStyle(Notification.DecoratedCustomViewStyle())
+            .setCustomContentView(timeView(context, R.layout.notification_timer, end, countDown = true, info, left))
+            .setCustomBigContentView(timeView(context, R.layout.notification_timer_big, end, countDown = true, info, left))
             .setCategory(Notification.CATEGORY_STOPWATCH)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setShowWhen(false)
         if (s.running) {
-            builder
-                .setWhen(System.currentTimeMillis() + s.left())
-                .setShowWhen(true)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
-                .setContentText(context.getString(R.string.timer_ends_at, java.time.ZonedDateTime.now().plusNanos(s.left() * 1_000_000).hm(Settings.twentyFour(context))))
-                .addAction(Notification.Action.Builder(null, context.getString(R.string.pause), action(context, TimerReceiver.Pause)).build())
-            if (Build.VERSION.SDK_INT >= 36 && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
-                builder.setRequestPromotedOngoing(true)
-            }
+            builder.addAction(button(context, R.string.pause, TimerReceiver.Pause))
+            builder.addAction(button(context, R.string.add_minute_short, TimerReceiver.AddMinute))
         } else {
-            builder
-                .setShowWhen(false)
-                .setContentText(context.getString(R.string.timer_paused, clockText((s.leftMs + 999) / 1000)))
-                .addAction(Notification.Action.Builder(null, context.getString(R.string.resume), action(context, TimerReceiver.Start)).build())
+            builder.addAction(button(context, R.string.resume, TimerReceiver.Start))
         }
-        builder.addAction(Notification.Action.Builder(null, context.getString(R.string.reset), action(context, TimerReceiver.Reset)).build())
+        builder.addAction(button(context, R.string.reset, TimerReceiver.Reset))
         manager.notify(OngoingId, builder.build())
     }
+
+    /**
+     * The big time: a Chronometer from [base] (an elapsedRealtime) counting down to it or up from it, or,
+     * with no [base], [staticMs] as plain muted text.
+     */
+    private fun timeView(context: Context, layout: Int, base: Long?, countDown: Boolean, info: String, staticMs: Long = 0) =
+        RemoteViews(context.packageName, layout).apply {
+            setTextViewText(R.id.info, info)
+            if (base != null) {
+                setChronometer(R.id.time, base, if (countDown) null else "−%s", true)
+                setChronometerCountDown(R.id.time, countDown)
+            } else {
+                setViewVisibility(R.id.time, View.GONE)
+                setViewVisibility(R.id.time_static, View.VISIBLE)
+                setTextViewText(R.id.time_static, DateUtils.formatElapsedTime((staticMs + 999) / 1000))
+            }
+        }
+
+    /** "10 min", "1 h 30 min", "45 sec". */
+    private fun durationText(context: Context, ms: Long): String {
+        val sec = ms / 1000
+        val parts = listOfNotNull(
+            (sec / 3600).takeIf { it > 0 }?.let { "$it ${context.getString(R.string.unit_h)}" },
+            (sec / 60 % 60).takeIf { it > 0 }?.let { "$it ${context.getString(R.string.unit_min)}" },
+            (sec % 60).takeIf { it > 0 || sec == 0L }?.let { "$it ${context.getString(R.string.unit_sec)}" },
+        )
+        return parts.joinToString(" ")
+    }
+
+    private fun button(context: Context, label: Int, action: String) =
+        Notification.Action.Builder(null, context.getString(label), action(context, action)).build()
 
     private fun action(context: Context, action: String) = PendingIntent.getBroadcast(
         context, action.hashCode(), Intent(context, TimerReceiver::class.java).setAction(action),
@@ -201,6 +243,8 @@ class TimerReceiver : BroadcastReceiver() {
             Pause -> TimerEngine.pause(context)
             Reset -> TimerEngine.reset(context)
             Stop -> TimerEngine.stop(context)
+            AddMinute -> TimerEngine.addMinute(context)
+            Restart -> { TimerEngine.stop(context); TimerEngine.start(context) }
         }
     }
 
@@ -210,5 +254,7 @@ class TimerReceiver : BroadcastReceiver() {
         const val Pause = "com.elara.clock.TIMER_PAUSE"
         const val Reset = "com.elara.clock.TIMER_RESET"
         const val Stop = "com.elara.clock.TIMER_STOP"
+        const val AddMinute = "com.elara.clock.TIMER_ADD_MINUTE"
+        const val Restart = "com.elara.clock.TIMER_RESTART"
     }
 }
