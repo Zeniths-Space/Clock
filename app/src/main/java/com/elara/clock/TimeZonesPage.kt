@@ -105,7 +105,7 @@ fun TimeZonesPage(onClose: () -> Unit) {
     val now by rememberNow()
     val twentyFour = rememberTwentyFour()
     val home = remember(Settings.get(context).homeCity) { Cities.home(context) }
-    val locale = Locale.getDefault()
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] // Followed, so a language change renames the zones.
     // Worked out again when the minute changes, so a zone switching to or from daylight time is renamed.
     val zones by produceState(emptyList<NamedZone>(), now) { value = withContext(Dispatchers.Default) { namedZones(now, locale) } }
     var query by rememberSaveable { mutableStateOf("") }
