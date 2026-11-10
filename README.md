@@ -43,6 +43,8 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
 - **Clock**: your city's time in huge thin digits, beside a line through your time zone on a dotted
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
   with sunrise, sunset and hours of daylight (computed on the phone); round chips for other cities.
+  The title opens a menu of your city and the cities you added: the page then shows that city (so do
+  the chips). The button at the top right opens Settings.
 - **World clock**: a night-blue map with solid land, the night side shaded where the sun is down now and
   every city's time in a bubble (placed so none overlap), then each city with its UTC offset, whether
   it is yesterday, today or tomorrow there, how far ahead or behind it is, and its time. The + button
@@ -50,7 +52,12 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
   about 450 cities (or search for one) and add it. Tapping a city in the list opens the map on it, with
   Back and Remove in the header.
 - **Alarms**: the next alarm as stacked hours over minutes with a dotted line from now to when it
-  rings, then the alarms as glass tiles with on/off switches. A 12h/24h switch.
+  rings, then the alarms as glass tiles with on/off switches. A 12h/24h switch (the same setting as in
+  Settings).
+- **Settings**: time format (phone, 12-hour, 24-hour), theme (phone, light, dark), snooze length (5 to
+  20 minutes), how long an alarm rings before it stops (1 to 30 minutes), gradual volume (starts quietly,
+  full after a minute), and the home city (automatic from the phone's time zone, an added city, or any
+  city chosen on the map).
 - **Timer**: hours, minutes and seconds in heavy stacked rows, a half-circle preset dial
   (1 to 45 minutes) that turns to the chosen preset, Reset, Start/Pause and +1 minute.
 - **Stopwatch**: minutes, seconds and hundredths in the same rows, with laps.

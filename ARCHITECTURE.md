@@ -44,5 +44,13 @@ the city map opens in about 60-75 ms instead of 165 ms.
   write is never lost), scheduling with `setAlarmClock`, ringing through a full-screen notification on
   the alarm volume, snooze and dismiss; `AlarmReceiver` (ring, snooze, dismiss) and
   `RescheduleReceiver` (boot, locked boot, update, time and time-zone changes).
+- `AlarmRingService.kt`: only for gradual volume. Android plays a notification's sound at one volume, so
+  the app plays the alarm sound itself (alarm usage, partial wake lock while playing) and raises it over a
+  minute, in a `systemExempted` foreground service (allowed for apps holding USE_EXACT_ALARM) that runs
+  only while an alarm rings and shows the alarm's own notification. If Android will not start it, or no
+  sound plays, the alarm rings through its notification as usual. Tested on the S24 Ultra 2026-11-10:
+  started on time, stopped on Dismiss and after the ring time.
+- `Settings.kt`: the settings, in device-protected storage so alarms read them before the first unlock.
+- `SettingsPage.kt`: the Settings page, drawn over the app.
 - `RingActivity.kt`: the ringing screen over the lock screen.
 - `ClockApplication.kt`: sets alarms again whenever the process starts.

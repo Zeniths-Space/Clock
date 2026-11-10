@@ -6,4 +6,4 @@
    alarm sound, and a date for one-time alarms.
 3. Timer alerts and a notification while a timer runs; several timers.
 4. World clock: search and add cities, remove them, day and night on the map (done). Next: reordering.
-5. Settings: home city, 12h/24h, week start, sounds.
+5. Settings: home city, 12h/24h, theme, snooze and ring length, gradual volume (done). Next: alarm sounds.
