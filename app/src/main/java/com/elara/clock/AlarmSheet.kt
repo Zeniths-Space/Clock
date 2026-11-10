@@ -26,12 +26,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,7 +92,6 @@ internal val Cookie = GenericShape { size, _ ->
  * with Cancel and Save at the bottom. The sheet does not drag; it closes from Cancel, its close button or a
  * tap outside, and asks before dropping changes. [editing] null adds a new alarm.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, onDelete: () -> Unit, onClose: () -> Unit) {
     val start = remember { editing ?: Alarm(id = 0, time = LocalTime.now().plusHours(1).withMinute(0)) }
@@ -117,14 +113,7 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
 
     val now by rememberNow()
     val at = nextRing(draft, now.atZone(java.time.ZoneId.systemDefault()))
-    ModalBottomSheet(
-        onDismissRequest = close,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        sheetGesturesEnabled = false,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        containerColor = if (Ink.dark) Color.Black else Ink.ground,
-    ) {
+    ElaraSheet(onDismissRequest = close, containerColor = if (Ink.dark) Color.Black else Ink.ground) {
         Column(Modifier.fillMaxHeight(0.9f).navigationBarsPadding()) {
             Column(
                 Modifier

@@ -86,6 +86,7 @@ private fun ComponentActivity.holdSplash() {
 fun ClockApp(asked: Tab? = null, onAskedShown: () -> Unit = {}) {
     var tab by rememberSaveable { mutableStateOf(Tab.CLOCK) }
     val cityMap = remember { CityMapState() }
+    val overlay = remember { OverlayHost() }
     LaunchedEffect(asked) {
         if (asked != null) {
             tab = asked
@@ -105,7 +106,7 @@ fun ClockApp(asked: Tab? = null, onAskedShown: () -> Unit = {}) {
             Tab.entries.forEach { if (it !in opened) { opened += it; delay(150) } }
         }
         Box(Modifier.statusBarsPadding()) {
-            CompositionLocalProvider(LocalCityMap provides cityMap) { TabStack(tab, opened) }
+            CompositionLocalProvider(LocalCityMap provides cityMap, LocalOverlayHost provides overlay) { TabStack(tab, opened) }
         }
         NavBar(
             tab,
@@ -115,6 +116,7 @@ fun ClockApp(asked: Tab? = null, onAskedShown: () -> Unit = {}) {
                 .navigationBarsPadding()
                 .padding(bottom = 22.dp),
         )
+        overlay.Show()
         if (cityMap.open) CityMap(cityMap.focus, onClose = cityMap::close)
     }
 }
