@@ -2,6 +2,9 @@ package com.elara.clock
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -69,15 +72,17 @@ fun WorldScreen(modifier: Modifier = Modifier) {
     var mapFocus by remember { mutableStateOf<City?>(null) }
     val openMap = { city: City? -> mapFocus = city; mapOpen = true }
     val homeDate = now.atZone(home.zone).toLocalDate()
+    // At least the screen's height, so the empty state can sit in the middle of the space under the map.
+    BoxWithConstraints(modifier.fillMaxSize()) {
     Column(
-        modifier
-            .fillMaxSize()
+        Modifier
             .verticalScroll(rememberScrollState())
+            .heightIn(min = maxHeight)
             .padding(horizontal = 20.dp)
             .padding(top = 6.dp, bottom = NavBarSpace),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(pluralStringResource(R.plurals.cities_count, others.size + 1, others.size + 1), style = smallText(12), modifier = Modifier.weight(1f))
+            Text(pluralStringResource(R.plurals.cities_count, others.size, others.size), style = smallText(12), modifier = Modifier.weight(1f))
             GlassIconButton(Icons.Plus, stringResource(R.string.add_city)) { openMap(null) }
         }
         Text(
@@ -93,7 +98,20 @@ fun WorldScreen(modifier: Modifier = Modifier) {
         MapCard(home, others, now, twentyFour)
 
         if (others.isEmpty()) {
-            Text(stringResource(R.string.no_cities), style = sans(14, color = Ink.muted), modifier = Modifier.padding(horizontal = 4.dp, vertical = 20.dp))
+            Column(
+                Modifier.weight(1f).fillMaxWidth().padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Box(Modifier.size(56.dp).clip(Cookie).background(Ink.purple.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Globe, null, tint = Ink.accent, modifier = Modifier.size(26.dp))
+                }
+                Text(stringResource(R.string.no_cities_title), style = sans(20, 500), modifier = Modifier.padding(top = 14.dp))
+                Text(
+                    stringResource(R.string.no_cities), style = sans(14, color = Ink.muted), textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp, start = 24.dp, end = 24.dp),
+                )
+            }
         }
         others.forEach { city ->
             val there = now.atZone(city.zone)
@@ -130,6 +148,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
         }
     }
     if (mapOpen) CityMap(mapFocus, onClose = { mapOpen = false })
+    }
 }
 
 private val BubbleWidth = 46.dp

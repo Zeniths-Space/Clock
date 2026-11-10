@@ -33,7 +33,8 @@
     <string name="city_map">City map</string>
     <string name="no_city_found">No city by that name. Try its country or a bigger city nearby.</string>
     <string name="clear_search">Clear search</string>
-    <string name="no_cities">Only your own city so far. Tap + to add another.</string>
+    <string name="no_cities_title">No cities yet</string>
+    <string name="no_cities">Tap + to add a city and see its time next to yours.</string>
     <string name="remove">Remove</string>
     <string name="remove_city">Remove %1$s?</string>
     <string name="remove_city_text">It will leave your world clock. You can add it again any time.</string>
