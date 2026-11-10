@@ -11,6 +11,14 @@
     <string name="search_cities">Search cities</string>
     <string name="settings">Settings</string>
     <string name="choose_city">Choose city</string>
+    <string name="time_zones">Time zones</string>
+    <plurals name="time_zones_count">
+        <item quantity="one">%1$d time zone, by offset from UTC</item>
+        <item quantity="other">%1$d time zones, by offset from UTC</item>
+    </plurals>
+    <string name="search_zones">Search time zones</string>
+    <string name="no_zone_found">No time zone by that name. Try a city, an abbreviation like EST, or an offset like +5:30.</string>
+    <string name="your_time">Your time</string>
     <string name="set_home_named">Make %1$s home</string>
     <string name="follow_phone">Phone</string>
     <string name="hours_12">12-hour</string>

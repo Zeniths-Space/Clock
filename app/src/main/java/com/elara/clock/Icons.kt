@@ -45,6 +45,8 @@ object Icons {
     val Sun = line("sun", 2f, circle(12f, 12f, 4f), "M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4")
     val Back = line("back", 2f, "M15 5l-7 7 7 7")
     val Trash = line("trash", 2f, "M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3")
+    /** A clock beside a list: the time zones page. */
+    val Zones = line("zones", 2f, circle(7.5f, 12f, 5f), "M7.5 9.5V12l1.5 1M15 7h6M15 12h6M15 17h6")
     val Check = line("check", 2.2f, "m5 12.5 4.5 4.5L19 7.5")
     val Close = line("close", 2f, "M6 6l12 12M18 6 6 18")
     val Flag = line("flag", 2f, "M5 21V4M5 4h11l-2 4 2 4H5")

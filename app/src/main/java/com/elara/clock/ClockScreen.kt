@@ -73,6 +73,7 @@ fun ClockScreen(modifier: Modifier = Modifier) {
     val show = { city: City -> shownKey = if (city.same(yours)) null else city.name + "|" + city.zone.id }
     var menu by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var settings by rememberSaveable { mutableStateOf(false) }
+    var zones by rememberSaveable { mutableStateOf(false) }
     val here = now.atZone(home.zone)
     Column(
         modifier
@@ -97,6 +98,8 @@ fun ClockScreen(modifier: Modifier = Modifier) {
                     Icon(Icons.Chevron, null, tint = Ink.text, modifier = Modifier.size(16.dp))
                 }
             }
+            GlassIconButton(Icons.Zones, stringResource(R.string.time_zones)) { zones = true }
+            Spacer(Modifier.width(8.dp))
             GlassIconButton(Icons.Sliders, stringResource(R.string.settings)) { settings = true }
         }
 
@@ -129,6 +132,7 @@ fun ClockScreen(modifier: Modifier = Modifier) {
         CityMenu(at, cities, home, yours, now, twentyFour, onPick = { show(it); menu = null }, onAdd = { menu = null; cityMap.show(null) }) { menu = null }
     }
     if (settings) Overlay { SettingsPage(onClose = { settings = false }) }
+    if (zones) Overlay { TimeZonesPage(onClose = { zones = false }) }
 }
 
 /**
