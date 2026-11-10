@@ -46,14 +46,6 @@ data class City(
  * the ones you chose for the world clock, kept in preferences and read once per process.
  */
 object Cities {
-    private val Defaults = listOf(
-        "Kathmandu\tNP\tAsia/Kathmandu\t27.7172\t85.324\tKTM",
-        "Delhi\tIN\tAsia/Kolkata\t28.6139\t77.209\tDEL",
-        "Dubai\tAE\tAsia/Dubai\t25.2048\t55.2708\tDXB",
-        "London\tGB\tEurope/London\t51.5072\t-0.1276\tLON",
-        "New York\tUS\tAmerica/New_York\t40.7128\t-74.006\tNYC",
-        "Tokyo\tJP\tAsia/Tokyo\t35.6762\t139.6503\tTYO",
-    )
     private const val KEY = "cities"
 
     @Volatile private var catalog: List<City>? = null
@@ -67,7 +59,7 @@ object Cities {
 
     /** Your cities, in the order you added them; a Compose state, so screens follow changes. */
     fun chosen(context: Context): List<City> = chosen ?: prefs(context).getString(KEY, null)
-        .let { it?.split('\n')?.filter(String::isNotEmpty) ?: Defaults }
+        .orEmpty().split('\n').filter(String::isNotEmpty) // None until you add some.
         .mapNotNull(City::fromLine)
         .also { chosen = it }
 
