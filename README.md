@@ -44,7 +44,11 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
   with sunrise, sunset and hours of daylight (computed on the phone); round chips for other cities.
   The title opens a menu of your city and the cities you added: the page then shows that city (so do
-  the chips). The button at the top right opens Settings.
+  the chips). The buttons at the top right open Time zones and Settings.
+- **Time zones**: every named time zone in the world (about 140: Eastern, Pacific, India Standard,
+  Nepal...), grouped by offset from UTC, each group with its time now, then each zone's name, its
+  abbreviation (EST, PST) and its main city. Opens on your own time; search by name, abbreviation, city or
+  offset. The names come from the phone's own time-zone data (ICU/CLDR), so they follow daylight time.
 - **World clock**: a night-blue map with solid land, the night side shaded where the sun is down now and
   every city's time in a bubble (placed so none overlap), then each city with its UTC offset, whether
   it is yesterday, today or tomorrow there, how far ahead or behind it is, and its time. The + button

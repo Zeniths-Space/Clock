@@ -52,5 +52,8 @@ the city map opens in about 60-75 ms instead of 165 ms.
   started on time, stopped on Dismiss and after the ring time.
 - `Settings.kt`: the settings, in device-protected storage so alarms read them before the first unlock.
 - `SettingsPage.kt`: the Settings page, drawn over the app.
+- `TimeZonesPage.kt`: the Time zones page. `namedZones` lists ICU's metazones in use now (one per named
+  zone, with its reference zone for the region "001"), named in the phone's language; abbreviations fall
+  back to US English, the only English data that has EST or PST.
 - `RingActivity.kt`: the ringing screen over the lock screen.
 - `ClockApplication.kt`: sets alarms again whenever the process starts.
