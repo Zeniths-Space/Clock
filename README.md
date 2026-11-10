@@ -43,16 +43,19 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
 - **Clock**: your city's time in huge thin digits, beside a line through your time zone on a dotted
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
   with sunrise, sunset and hours of daylight (computed on the phone); round chips for other cities.
-- **World clock**: a night-blue dotted map with every city's time in a bubble, then each city with
-  its UTC offset, how far ahead or behind it is, and its time.
+- **World clock**: a night-blue dotted map with the night side shaded where the sun is down now and
+  every city's time in a bubble (placed so none overlap), then each city with its UTC offset, whether
+  it is yesterday, today or tomorrow there, how far ahead or behind it is, and its time. The + button
+  opens a search over about 450 cities; long-press a city to remove it.
 - **Alarms**: the next alarm as stacked hours over minutes with a dotted line from now to when it
   rings, then the alarms as glass tiles with on/off switches. A 12h/24h switch.
 - **Timer**: hours, minutes and seconds in heavy stacked rows, a half-circle preset dial
   (1 to 45 minutes) that turns to the chosen preset, Reset, Start/Pause and +1 minute.
 - **Stopwatch**: minutes, seconds and hundredths in the same rows, with laps.
 
-The home city is the phone's time zone. Cities known so far: Kathmandu, Delhi, Dubai, London,
-New York and Tokyo.
+The home city is the phone's time zone. The city list (`app/src/main/assets/cities.tsv`) is made
+offline by `tools/cities.py` from the tz database's `zone.tab`, plus large cities that share a zone;
+your chosen cities are kept in the app's preferences. Nothing is looked up online.
 
 ## Build
 

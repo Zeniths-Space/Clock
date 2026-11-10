@@ -10,8 +10,10 @@ One app module, Jetpack Compose, no other libraries.
   minute and only while the app is visible.
 - `ClockScreen.kt`, `WorldScreen.kt`, `AlarmsScreen.kt`, `TimerScreen.kt`, `StopwatchScreen.kt`:
   one file per tab.
-- `Places.kt`: cities, UTC labels, offsets between zones, sunrise and sunset (the standard sunrise
-  equation).
+- `Places.kt`: cities (the catalog in `assets/cities.tsv` and your chosen ones in preferences), UTC
+  labels, offsets between zones, sunrise and sunset (the standard sunrise equation), and where the sun
+  is overhead, for the map's night side.
+- `CitySheet.kt`: the Add city sheet, a search over the catalog.
 - `WorldMap.kt`: the dotted map from a coarse hand-made land mask, drawn in one `drawPoints` call.
 - `Bs.kt`, `BsTable.kt`: AD to Bikram Sambat dates, copied from Elara Calendar (no shared code at
   run time).
