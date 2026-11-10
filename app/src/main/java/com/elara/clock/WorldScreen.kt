@@ -2,12 +2,9 @@ package com.elara.clock
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -58,7 +55,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Your cities: where they are on the map, and what time it is there next to your own. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WorldScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -67,10 +63,11 @@ fun WorldScreen(modifier: Modifier = Modifier) {
     val twentyFour = DateFormat.is24HourFormat(context)
     val chosen = Cities.chosen(context)
     val others = chosen.filterNot { it.same(home) }
-    var adding by rememberSaveable { mutableStateOf(false) }
-    var removing by remember { mutableStateOf<City?>(null) }
+    // The city map: open with a city to show it, or with your own city to add one.
+    var mapOpen by rememberSaveable { mutableStateOf(false) }
+    var mapFocus by remember { mutableStateOf<City?>(null) }
+    val openMap = { city: City? -> mapFocus = city; mapOpen = true }
     val homeDate = now.atZone(home.zone).toLocalDate()
-    val removeLabel = stringResource(R.string.remove)
     Column(
         modifier
             .fillMaxSize()
@@ -80,7 +77,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(pluralStringResource(R.plurals.cities_count, others.size + 1, others.size + 1), style = smallText(12), modifier = Modifier.weight(1f))
-            GlassIconButton(Icons.Plus, stringResource(R.string.add_city)) { adding = true }
+            GlassIconButton(Icons.Plus, stringResource(R.string.add_city)) { openMap(null) }
         }
         Text(
             buildAnnotatedString {
@@ -116,7 +113,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
                 Modifier
                     .fillMaxWidth()
                     .drawBehind { drawLine(Ink.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
-                    .combinedClickable(onLongClickLabel = removeLabel, onLongClick = { removing = city }, onClick = {})
+                    .clickable(onClickLabel = stringResource(R.string.city_map)) { openMap(city) }
                     .padding(horizontal = 4.dp, vertical = 14.dp)
                     .semantics(mergeDescendants = true) {},
                 verticalAlignment = Alignment.CenterVertically,
@@ -131,21 +128,7 @@ fun WorldScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-    if (adding) CitySheet(onClose = { adding = false })
-    removing?.let { city ->
-        AlertDialog(
-            onDismissRequest = { removing = null },
-            containerColor = if (Ink.dark) Color(0xFF1F1F1F) else Color.White,
-            title = { Text(stringResource(R.string.remove_city, city.name), style = sans(20, 500)) },
-            text = { Text(stringResource(R.string.remove_city_text), style = sans(15, color = Ink.muted)) },
-            confirmButton = {
-                TextButton(onClick = { Cities.remove(context, city); removing = null }) {
-                    Text(removeLabel, style = sans(15, 500, if (Ink.dark) Color(0xFFFF8A8A) else Color(0xFFD93A3A)))
-                }
-            },
-            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.cancel), style = sans(15, 500, Ink.accent)) } },
-        )
-    }
+    if (mapOpen) CityMap(mapFocus, onClose = { mapOpen = false })
 }
 
 private val BubbleWidth = 46.dp

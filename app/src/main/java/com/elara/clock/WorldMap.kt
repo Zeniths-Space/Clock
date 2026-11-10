@@ -1,5 +1,6 @@
 package com.elara.clock
 
+import android.content.Context
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
@@ -91,3 +92,20 @@ fun worldMapPoints(origin: Offset, width: Float): List<Offset> {
 /** Draws [points] from [worldMapPoints] as round dots [dotPx] across, in one draw call. */
 fun DrawScope.drawWorldMap(points: List<Offset>, color: Color, dotPx: Float) =
     drawPoints(points, PointMode.Points, color, strokeWidth = dotPx, cap = StrokeCap.Round)
+
+/**
+ * The detailed land for the city map: assets/land.bin (made by tools/land.py from Natural Earth), one bit per
+ * 1-degree cell over the same 80 N to 60 S frame. Each land cell's centre is in map degrees: x = lon + 180,
+ * y = 80 - lat. Read once, off the main thread.
+ */
+object Land {
+    @Volatile private var cells: List<Offset>? = null
+
+    fun cells(context: Context): List<Offset> = cells ?: context.assets.open("land.bin").use { it.readBytes() }.let { b ->
+        buildList {
+            for (row in 0 until 140) for (c in 0 until 360) {
+                if (b[row * 45 + c / 8].toInt() shr (7 - c % 8) and 1 == 1) add(Offset(c + 0.5f, row + 0.5f))
+            }
+        }
+    }.also { cells = it }
+}

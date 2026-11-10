@@ -3,7 +3,7 @@
 
 Every place in the tz database's zone.tab (one per time zone, with its coordinates), plus large cities
 that share another city's zone (Mumbai, San Francisco, ...). Rows: name, country code, zone, lat, lon,
-short code. Run: python3 tools/cities.py [/usr/share/zoneinfo/zone.tab]
+short code, and 1 for a large city (labelled first on the map) else 0. Run: python3 tools/cities.py [/usr/share/zoneinfo/zone.tab]
 """
 import pathlib
 import sys
@@ -39,6 +39,7 @@ EXTRA = [
     ("Frankfurt", "DE", "Europe/Berlin", 50.1109, 8.6821), ("Manchester", "GB", "Europe/London", 53.4808, -2.2426),
     ("Edinburgh", "GB", "Europe/London", 55.9533, -3.1883), ("St Petersburg", "RU", "Europe/Moscow", 59.9311, 30.3609),
 ]
+EXTRA_NAMES = {row[0] for row in EXTRA}
 
 
 def degrees(s: str) -> float:
@@ -73,7 +74,8 @@ def main() -> None:
     with out.open("w") as f:
         for name, cc, zone, lat, lon in sorted(rows.values()):
             code = CODES.get(name, "".join(c for c in name if c.isalpha())[:3].upper())
-            f.write(f"{name}\t{cc}\t{zone}\t{lat:.4f}\t{lon:.4f}\t{code}\n")
+            major = int(name in CODES or name in EXTRA_NAMES)
+            f.write(f"{name}\t{cc}\t{zone}\t{lat:.4f}\t{lon:.4f}\t{code}\t{major}\n")
     print(f"{len(rows)} cities -> {out}")
 
 

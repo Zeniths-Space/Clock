@@ -385,7 +385,7 @@ private fun Divider() {
 }
 
 @Composable
-private fun PillButton(text: String, primary: Boolean, modifier: Modifier, onClick: () -> Unit) {
+internal fun PillButton(text: String, primary: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(32.dp)
     Box(
         modifier

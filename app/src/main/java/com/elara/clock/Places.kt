@@ -19,18 +19,24 @@ import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** A city on the clock: [code] is its short chip label; [cc] its ISO country code; [lat] and [lon] in degrees. */
-data class City(val name: String, val cc: String, val code: String, val zone: ZoneId, val lat: Double, val lon: Double) {
+/**
+ * A city on the clock: [code] is its short chip label; [cc] its ISO country code; [lat] and [lon] in degrees.
+ * [major] marks a large city, labelled first on the city map.
+ */
+data class City(
+    val name: String, val cc: String, val code: String, val zone: ZoneId, val lat: Double, val lon: Double,
+    val major: Boolean = false,
+) {
     val country: String get() = if (cc.isEmpty()) "" else Locale("", cc).displayCountry
 
-    /** One tab-separated line, as in assets/cities.tsv: name, country code, zone, lat, lon, code. */
+    /** One tab-separated line, as in assets/cities.tsv: name, country code, zone, lat, lon, code (without [major]). */
     fun toLine() = "$name\t$cc\t${zone.id}\t$lat\t$lon\t$code"
 
     companion object {
         /** The city in [line], or null when it can't be read or this phone doesn't know its time zone. */
         fun fromLine(line: String): City? = runCatching {
             val f = line.split('\t')
-            City(f[0], f[1], f[5], ZoneId.of(f[2]), f[3].toDouble(), f[4].toDouble())
+            City(f[0], f[1], f[5], ZoneId.of(f[2]), f[3].toDouble(), f[4].toDouble(), f.getOrNull(6) == "1")
         }.getOrNull()
     }
 }

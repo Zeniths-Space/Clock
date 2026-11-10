@@ -22,17 +22,17 @@
         <item quantity="one">%1$d CITY</item>
         <item quantity="other">%1$d CITIES</item>
     </plurals>
-    <plurals name="cities_known">
-        <item quantity="one">%1$d city</item>
-        <item quantity="other">%1$d cities</item>
-    </plurals>
     <string name="add_city">Add city</string>
     <string name="your_cities">Your cities</string>
     <string name="around_world">around the world</string>
     <string name="map_now">Day and night now · %1$s in %2$s</string>
+    <string name="add_named">Add %1$s</string>
+    <string name="in_world_clock">In your world clock</string>
+    <string name="your_city">Your city</string>
+    <string name="back">Back</string>
+    <string name="city_map">City map</string>
     <string name="no_city_found">No city by that name. Try its country or a bigger city nearby.</string>
     <string name="clear_search">Clear search</string>
-    <string name="added">Added</string>
     <string name="no_cities">Only your own city so far. Tap + to add another.</string>
     <string name="remove">Remove</string>
     <string name="remove_city">Remove %1$s?</string>
