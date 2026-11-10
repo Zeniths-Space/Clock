@@ -3,7 +3,6 @@ package com.elara.clock
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,12 +21,6 @@ class WorldTest {
         val (lat, lon) = subsolarPoint(Instant.parse("2026-12-21T06:00:00Z"))
         assertEquals(-23.44, lat, 0.3)
         assertEquals(90.0, lon, 1.5) // Six hours before noon at Greenwich, noon is 90 degrees east.
-    }
-
-    @Test fun dayAndNight() {
-        val sun = subsolarPoint(Instant.parse("2026-11-10T04:00:00Z")) // 09:45 in Kathmandu, 23:00 in New York.
-        assertTrue(isDay(27.7, 85.3, sun))
-        assertFalse(isDay(40.7, -74.0, sun))
     }
 
     @Test fun cityLineRoundTrip() {

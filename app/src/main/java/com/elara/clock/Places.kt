@@ -169,8 +169,3 @@ fun subsolarPoint(at: Instant): Pair<Double, Double> {
     return decl to lon
 }
 
-/** True when the sun is above the horizon at [lat], [lon], for the sun overhead at [sun] (from [subsolarPoint]). */
-fun isDay(lat: Double, lon: Double, sun: Pair<Double, Double>): Boolean {
-    val rad = Math.PI / 180
-    return sin(lat * rad) * sin(sun.first * rad) + cos(lat * rad) * cos(sun.first * rad) * cos((lon - sun.second) * rad) > 0
-}

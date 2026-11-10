@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,12 +48,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -110,7 +107,7 @@ fun CityMap(focus: City?, onClose: () -> Unit) {
 private fun CityMapPage(focus: City?, onClose: () -> Unit) {
     val context = LocalContext.current
     val catalog by produceState(emptyList<City>()) { value = withContext(Dispatchers.IO) { Cities.catalog(context) } }
-    val land by produceState(emptyList<Offset>()) { value = withContext(Dispatchers.IO) { Land.cells(context) } }
+    val land by produceState(Land.loaded()) { value = withContext(Dispatchers.IO) { Land.load(context) } }
     val home = remember { Cities.home(context) }
     val chosen = Cities.chosen(context)
     var selected by remember { mutableStateOf(focus ?: home) }
@@ -148,12 +145,7 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
         }
 
         val sun = remember(now) { subsolarPoint(now) }
-        // As flat x,y arrays: drawPoints with a List records one point at a time, too slow for 16 000 dots.
-        val (dayLand, nightLand) = remember(land, sun) {
-            land.partition { isDay(80.0 - it.y, it.x - 180.0, sun) }.let { (d, n) -> d.toXy() to n.toXy() }
-        }
-        val dayPaint = remember { Paint().apply { strokeCap = StrokeCap.Round } }.also { it.color = Ink.lavender.copy(alpha = 0.55f) }
-        val nightPaint = remember { Paint().apply { strokeCap = StrokeCap.Round } }.also { it.color = Ink.lavender.copy(alpha = 0.2f) }
+        val shade = remember(sun) { nightShade(sun) }
         // Cities in label order, worked out once: yours, then large cities, then the rest.
         val mine = chosen + home
         val ranked = remember(catalog, mine) {
@@ -169,8 +161,15 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
         val labelStyle = TextStyle(fontSize = 11.sp, color = Ink.lavender)
         val chosenStyle = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Medium)
 
-        // The land and cities: moving the map only moves this layer; it is drawn again only when the zoom or
-        // the chosen city changes.
+        // The land: zoomed out, the coarse world; zoomed in, only the detailed tiles on screen. Moving the map
+        // moves this layer, and it is drawn again only when the zoom or the set of tiles on screen changes.
+        val zoomedOut by remember { derivedStateOf { k < w / 120 } }
+        val tilesOnScreen by remember(land) {
+            derivedStateOf {
+                val view = Rect(center.x - w / 2 / k - 1, center.y - h / 2 / k - 1, center.x + w / 2 / k + 1, center.y + h / 2 / k + 1)
+                land?.tiles.orEmpty().filter { it.first.overlaps(view) }.map { it.second }
+            }
+        }
         Canvas(
             Modifier
                 .fillMaxSize()
@@ -179,16 +178,20 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
                     translationY = h / 2 - center.y * k
                 },
         ) {
-            val dot = (k * 0.5f).coerceIn(1.6f * dp, 6f * dp)
-            nightPaint.strokeWidth = dot / k
-            dayPaint.strokeWidth = dot / k
             scale(k, k, pivot = Offset.Zero) {
-                drawIntoCanvas {
-                    it.drawRawPoints(PointMode.Points, nightLand, nightPaint)
-                    it.drawRawPoints(PointMode.Points, dayLand, dayPaint)
-                }
+                if (zoomedOut) land?.let { drawPath(it.coarse, LandColor) } else tilesOnScreen.forEach { drawPath(it, LandColor) }
+                drawPath(shade, NightColor)
             }
-            // Cities are drawn in this layer too, at unscaled sizes, so dragging never draws them again.
+        }
+        // The cities, in a layer of their own that dragging only moves; drawn again when the zoom or choice changes.
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = w / 2 - center.x * k
+                    translationY = h / 2 - center.y * k
+                },
+        ) {
             fun inLayer(spot: Offset) = spot * k
             // Cities: every one a small dot; yours lilac; names where they fit, larger cities first.
             ranked.forEachIndexed { i, c ->
@@ -329,8 +332,6 @@ private fun CityMapPage(focus: City?, onClose: () -> Unit) {
         )
     }
 }
-
-private fun List<Offset>.toXy() = FloatArray(size * 2).also { a -> forEachIndexed { i, p -> a[2 * i] = p.x; a[2 * i + 1] = p.y } }
 
 /** Lower case without accents, so "sao" finds São Paulo. */
 private fun String.fold() = Normalizer.normalize(trim().lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "")

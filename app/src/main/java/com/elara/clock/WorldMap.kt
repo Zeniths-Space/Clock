@@ -2,6 +2,11 @@ package com.elara.clock
 
 import android.content.Context
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
@@ -22,10 +27,6 @@ object WorldMap {
 
     fun x(lon: Double) = ((lon + 180) / 360).toFloat()
     fun y(lat: Double) = ((NORTH - lat) / (NORTH - SOUTH)).toFloat()
-
-    /** The longitude and latitude at [x] and [y] on the map, the inverse of [x] and [y]. */
-    fun lon(x: Float) = x * 360.0 - 180
-    fun lat(y: Float) = NORTH - y * (NORTH - SOUTH).toDouble()
 
     /** Width over height of the map. */
     const val ASPECT = 360f / (NORTH - SOUTH)
@@ -93,19 +94,69 @@ fun worldMapPoints(origin: Offset, width: Float): List<Offset> {
 fun DrawScope.drawWorldMap(points: List<Offset>, color: Color, dotPx: Float) =
     drawPoints(points, PointMode.Points, color, strokeWidth = dotPx, cap = StrokeCap.Round)
 
-/**
- * The detailed land for the city map: assets/land.bin (made by tools/land.py from Natural Earth), one bit per
- * 1-degree cell over the same 80 N to 60 S frame. Each land cell's centre is in map degrees: x = lon + 180,
- * y = 80 - lat. Read once, off the main thread.
- */
-object Land {
-    @Volatile private var cells: List<Offset>? = null
+/** Solid land: opaque, so the fine map's overlapping tiles show no seams. */
+val LandColor = Color(0xFF4A3A9C)
 
-    fun cells(context: Context): List<Offset> = cells ?: context.assets.open("land.bin").use { it.readBytes() }.let { b ->
-        buildList {
-            for (row in 0 until 140) for (c in 0 until 360) {
-                if (b[row * 45 + c / 8].toInt() shr (7 - c % 8) and 1 == 1) add(Offset(c + 0.5f, row + 0.5f))
+/**
+ * The land for the World page's map and the city map: assets/land.bin (made by tools/land.py from Natural
+ * Earth), in map degrees: x = lon + 180, y = 80 - lat. [coarse] is the whole world in one path; [tiles] the
+ * detailed land cut into 10-degree squares, each with its bounds, so a zoomed-in map draws only what is on
+ * screen. Read once, off the main thread.
+ */
+class Land(val coarse: Path, val tiles: List<Pair<Rect, Path>>) {
+    companion object {
+        @Volatile private var land: Land? = null
+
+        /** The land if it has been read already, so a screen shown again draws it at once. */
+        fun loaded(): Land? = land
+
+        fun load(context: Context): Land = land ?: context.assets.open("land.bin").use { it.readBytes() }.let { bytes ->
+            val b = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+            fun Path.ring() {
+                val n = b.int
+                for (i in 0 until n) {
+                    val x = b.short / 100f + 180
+                    val y = WorldMap.NORTH - b.short / 100f
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
             }
-        }
-    }.also { cells = it }
+            val coarse = Path().apply { fillType = PathFillType.EvenOdd; repeat(b.int) { ring() } }
+            val tiles = HashMap<Int, Path>()
+            repeat(b.int) {
+                val col = b.short.toInt()
+                val row = b.short.toInt()
+                tiles.getOrPut(row * 36 + col) { Path().apply { fillType = PathFillType.EvenOdd } }.ring()
+            }
+            Land(coarse, tiles.map { (key, path) ->
+                val x = key % 36 * 10f
+                val y = key / 36 * 10f - (90 - WorldMap.NORTH) // Rows count from 90 N; the map starts at 80 N.
+                Rect(x, y, x + 10, y + 10) to path
+            })
+        }.also { land = it }
+    }
 }
+
+/**
+ * The night side for [sun] (from [subsolarPoint]) in map degrees, reaching well past the map's edges: for
+ * each longitude, from where the sun is on the horizon to the south (northern summer) or north edge.
+ */
+fun nightShade(sun: Pair<Double, Double>): Path {
+    val rad = Math.PI / 180
+    // Near an equinox the terminator runs nearly pole to pole; keep tan(decl) away from 0.
+    val decl = sun.first.let { if (kotlin.math.abs(it) < 0.2) if (it < 0) -0.2 else 0.2 else it }
+    val edge = if (decl > 0) 400f else -260f
+    return Path().apply {
+        moveTo(-200f, edge)
+        var lon = -380.0
+        while (lon <= 380.0) {
+            val lat = kotlin.math.atan(-kotlin.math.cos((lon - sun.second) * rad) / kotlin.math.tan(decl * rad)) / rad
+            lineTo((lon + 180).toFloat(), (WorldMap.NORTH - lat).toFloat())
+            lon += 2.0
+        }
+        lineTo(560f, edge)
+        close()
+    }
+}
+
+val NightColor = Color(0xFF05021A).copy(alpha = 0.42f)
