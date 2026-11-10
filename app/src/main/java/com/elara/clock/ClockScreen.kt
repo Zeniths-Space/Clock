@@ -33,6 +33,8 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -124,6 +126,8 @@ private fun TimeZoneStrip(home: City, now: Instant) {
                 .fillMaxSize()
                 .padding(vertical = MapInset)
                 .clipToBounds()
+                // Kept as a picture: thousands of dots, redrawn only when the home city changes.
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithCache {
                     // The map at 900 dp wide (as in the design), slid so the city sits on the line.
                     val mapW = 900.dp.toPx()

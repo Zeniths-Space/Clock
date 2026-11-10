@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -113,7 +115,15 @@ fun Modifier.pageBackground(): Modifier = drawBehind {
  */
 @Composable
 fun Digits(text: String, style: TextStyle, height: Dp, modifier: Modifier = Modifier) {
-    Text(text, style = style, maxLines = 1, softWrap = false, modifier = modifier.height(height).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
+    // Kept as a picture: glyphs this big are drawn as outlines, not from Android's glyph cache, which made
+    // every redraw of a screen (a tab fading in, say) cost 10-15 ms on the render thread at 60 Hz.
+    Text(
+        text, style = style, maxLines = 1, softWrap = false,
+        modifier = modifier
+            .height(height)
+            .wrapContentHeight(Alignment.CenterVertically, unbounded = true)
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+    )
 }
 
 @Composable

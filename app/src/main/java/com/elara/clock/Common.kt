@@ -25,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -91,7 +93,9 @@ fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
         Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(TabGap)) {
             Tab.entries.forEach { tab ->
                 val on = tab == selected
-                val tint by animateColorAsState(if (on) Color.White else Ink.text, label = "tab icon")
+                // Two icons crossfaded in their layers, read at draw time: animating a tint in composition
+                // rebuilt the bar on every frame of a tab switch.
+                val lit = animateFloatAsState(if (on) 1f else 0f, label = "tab icon")
                 Box(
                     Modifier
                         .size(TabWidth, 44.dp)
@@ -99,7 +103,8 @@ fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
                         .selectable(selected = on, role = Role.Tab) { onSelect(tab) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(tab.icon, stringResource(tab.label), tint = tint, modifier = Modifier.size(20.dp))
+                    Icon(tab.icon, stringResource(tab.label), tint = Ink.text, modifier = Modifier.size(20.dp).graphicsLayer { alpha = 1f - lit.value })
+                    Icon(tab.icon, null, tint = Color.White, modifier = Modifier.size(20.dp).graphicsLayer { alpha = lit.value })
                 }
             }
         }
