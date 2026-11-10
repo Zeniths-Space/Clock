@@ -12,5 +12,6 @@ class ClockApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AlarmEngine.reschedule(this)
+        TimerEngine.reschedule(this)
     }
 }

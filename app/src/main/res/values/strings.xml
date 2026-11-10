@@ -129,6 +129,12 @@
     <string name="pause">Pause</string>
     <string name="start">Start</string>
     <string name="add_minute">Add one minute</string>
+    <string name="timer_done">Time\'s up</string>
+    <string name="timer_paused">Paused · %1$s left</string>
+    <string name="timer_ends_at">Ends at %1$s</string>
+    <string name="resume">Resume</string>
+    <string name="stop">Stop</string>
+    <string name="channel_timer">Running timer</string>
     <string name="unit_h">h</string>
     <string name="unit_min">min</string>
     <string name="unit_sec">sec</string>

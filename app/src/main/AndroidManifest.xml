@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- A running timer as a Live Update: the countdown chip in the status bar (Android 16 QPR1+). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
         android:name=".ClockApplication"
@@ -60,6 +62,12 @@
             android:foregroundServiceType="systemExempted" />
         <receiver
             android:name=".AlarmReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+
+        <!-- The timer ending, and its notification buttons: only this app's PendingIntents reach it. -->
+        <receiver
+            android:name=".TimerReceiver"
             android:directBootAware="true"
             android:exported="false" />
 

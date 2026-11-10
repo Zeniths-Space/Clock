@@ -4,8 +4,13 @@ A private, offline Android clock. Part of the Zenith's Space app collection.
 Application ID `com.elara.clock`.
 
 **Status:** alarms work: they are saved, ring on time over the lock screen, snooze and survive a restart,
-and are added and edited in a sheet. The timer and stopwatch still count only while the app is open and
-do not alert yet.
+and are added and edited in a sheet. The timer keeps running with the app closed: its notification counts
+down, and it rings like an alarm when it ends. The stopwatch still counts only while the app is open.
+
+The timer notification asks Android to make it a Live Update (Android 16 QPR1 and later), which shows
+as a countdown chip in the status bar. One UI decides whether to allow it. On the test phone (SM-S928B,
+One UI 9) it was not allowed by default, and Good Lock's QuickStar "hide ongoing chip" hides the chip
+anyway, also for Samsung's own Clock.
 
 ## Alarms
 

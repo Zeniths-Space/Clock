@@ -31,11 +31,14 @@ object AlarmEngine {
     // hours) come from Settings.
     /** One channel per sound and vibration choice: Android fixes both per channel. */
     private enum class Channel(val id: String, val sound: Boolean, val vibrate: Boolean, val label: Int) {
-        BOTH("alarm", true, true, R.string.channel_alarms),
+        BOTH(RingChannel, true, true, R.string.channel_alarms),
         SOUND("alarm_no_vibration", true, false, R.string.channel_alarms_quiet),
         VIBRATE("alarm_vibrate_only", false, true, R.string.channel_alarms_vibrate),
         SILENT("alarm_silent", false, false, R.string.channel_alarms_silent),
     }
+
+    /** The alarm channel with sound and vibration; the timer rings on it too. */
+    const val RingChannel = "alarm"
 
     private val _alarms = MutableStateFlow<List<Alarm>>(emptyList())
     private var loaded = false
@@ -219,7 +222,7 @@ object AlarmEngine {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun createChannels(context: Context, manager: NotificationManager) {
+    fun createChannels(context: Context, manager: NotificationManager) {
         // On the alarm volume and usage, so it rings with the ringer on silent and through Do not disturb's alarm exception.
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
@@ -264,6 +267,9 @@ class RescheduleReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED,
             Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> AlarmEngine.reschedule(context)
+        }
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> TimerEngine.reschedule(context)
         }
     }
 }

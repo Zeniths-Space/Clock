@@ -46,8 +46,11 @@ import java.time.ZoneId
 class RingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val timer = intent.getBooleanExtra(Timer, false)
         val id = intent.getIntExtra(AlarmId, -1)
-        val alarm = AlarmEngine.alarms(this).value.firstOrNull { it.id == id } ?: return finish()
+        // The timer rings as an alarm without snooze; Stop silences it.
+        val alarm = if (timer) Alarm(id = -1, time = java.time.LocalTime.MIDNIGHT, label = getString(R.string.timer_done), snooze = false)
+        else AlarmEngine.alarms(this).value.firstOrNull { it.id == id } ?: return finish()
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -64,7 +67,7 @@ class RingActivity : ComponentActivity() {
                 RingScreen(
                     alarm,
                     onSnooze = { AlarmEngine.snooze(this, alarm.id); finish() },
-                    onDismiss = { AlarmEngine.dismiss(this, alarm.id); finish() },
+                    onDismiss = { if (timer) TimerEngine.stop(this) else AlarmEngine.dismiss(this, alarm.id); finish() },
                 )
             }
         }
@@ -72,6 +75,7 @@ class RingActivity : ComponentActivity() {
 
     companion object {
         const val AlarmId = "com.elara.clock.ALARM_ID"
+        const val Timer = "com.elara.clock.TIMER"
     }
 }
 

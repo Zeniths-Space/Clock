@@ -1,6 +1,11 @@
 package com.elara.clock
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.SystemClock
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -26,10 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,30 +66,25 @@ val RowDigits get() = sans(132, weight = 700, spacing = -8f)
 
 private val Presets = listOf(1, 3, 5, 10, 15, 25, 45)
 
-/**
- * One countdown. This first version runs it only in the app (nothing rings when it ends); the alarm
- * engine adds the alert, the notification and surviving the app being closed.
- */
+/** One countdown; its state, end alarm and notification live in [TimerEngine], so it runs with the app closed. */
 @Composable
 fun TimerScreen(modifier: Modifier = Modifier) {
-    var minutes by rememberSaveable { mutableIntStateOf(10) }
-    var durationMs by rememberSaveable { mutableLongStateOf(10 * 60_000L) }
-    var leftMs by rememberSaveable { mutableLongStateOf(durationMs) }
-    var endsAt by rememberSaveable { mutableLongStateOf(0L) } // SystemClock.elapsedRealtime when running, 0 when paused.
-    val running = endsAt != 0L
+    val context = LocalContext.current
+    val timer = TimerEngine.get(context)
+    val running = timer.running
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     var tick by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    // While running: wake at each whole second left, no more often.
-    LaunchedEffect(running) {
+    // While running: wake at each whole second left, no more often. TimerEngine ends it when its alarm goes off.
+    LaunchedEffect(timer.endsAt) {
         while (running) {
             tick = SystemClock.elapsedRealtime()
-            val left = endsAt - tick
-            if (left <= 0) {
-                leftMs = 0; endsAt = 0; break
-            }
+            val left = timer.endsAt - tick
+            if (left <= 0) break
             delay(left % 1000 + 1)
         }
     }
-    val shown = if (running) (endsAt - tick).coerceAtLeast(0) else leftMs
+    val shown = if (running) (timer.endsAt - tick).coerceAtLeast(0) else timer.leftMs
+    val durationMs = timer.durationMs
     val total = (shown + 999) / 1000
     val now = Instant.now().atZone(ZoneId.systemDefault())
     val ends = now.plusNanos(shown * 1_000_000)
@@ -115,12 +113,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             StackRow((total % 60).toString().padStart(2, '0'), stringResource(R.string.unit_sec), Ink.text)
         }
 
-        PresetDial(minutes) { m ->
-            minutes = m
-            durationMs = m * 60_000L
-            leftMs = durationMs
-            endsAt = 0
-        }
+        PresetDial(timer.minutes) { TimerEngine.choose(context, it) }
 
         Row(
             Modifier.fillMaxWidth().padding(top = 6.dp),
@@ -128,18 +121,22 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             GlassIconButton(Icons.Reset, stringResource(R.string.reset), size = 60.dp, iconSize = 22.dp) {
-                leftMs = durationMs; endsAt = 0
+                TimerEngine.reset(context)
             }
             MainButton(
                 if (running) Icons.Pause else Icons.Play,
                 stringResource(if (running) R.string.pause else R.string.start),
             ) {
                 if (running) {
-                    leftMs = (endsAt - SystemClock.elapsedRealtime()).coerceAtLeast(0); endsAt = 0
-                } else if (leftMs > 0) {
+                    TimerEngine.pause(context)
+                } else {
+                    // The end rings through a notification: ask for them (Android 13+) the first time.
+                    if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                     // Set tick too, or the first frame shows endsAt minus an old tick: a jump, then the real time.
                     tick = SystemClock.elapsedRealtime()
-                    endsAt = tick + leftMs
+                    TimerEngine.start(context)
                 }
             }
             val addLabel = stringResource(R.string.add_minute)
@@ -149,8 +146,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
                     .glass(CircleShape, elevation = 8.dp)
                     .clip(CircleShape)
                     .clickable(role = Role.Button, onClickLabel = addLabel) {
-                        if (running) endsAt += 60_000 else leftMs += 60_000
-                        durationMs += 60_000
+                        TimerEngine.addMinute(context)
                     }
                     .semantics { contentDescription = addLabel },
                 contentAlignment = Alignment.Center,

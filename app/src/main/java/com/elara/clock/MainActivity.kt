@@ -70,10 +70,15 @@ class MainActivity : ComponentActivity() {
         asked = tabFor(intent)
     }
 
-    private fun tabFor(intent: Intent?) = if (intent?.getBooleanExtra(OpenAlarms, false) == true) Tab.ALARMS else null
+    private fun tabFor(intent: Intent?) = when {
+        intent?.getBooleanExtra(OpenAlarms, false) == true -> Tab.ALARMS
+        intent?.getBooleanExtra(OpenTimer, false) == true -> Tab.TIMER
+        else -> null
+    }
 
     companion object {
         const val OpenAlarms = "com.elara.clock.OPEN_ALARMS"
+        const val OpenTimer = "com.elara.clock.OPEN_TIMER"
     }
 }
 
