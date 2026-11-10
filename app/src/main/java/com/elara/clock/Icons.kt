@@ -32,9 +32,10 @@ object Icons {
 
     val Clock = line("clock", 1.8f, circle(12f, 12f, 9f), "M12 7v5l3 2")
     val Globe = line("globe", 1.8f, circle(12f, 12f, 9f), "M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18")
-    val Alarm = line("alarm", 1.8f, circle(12f, 13f, 8f), "M12 9v4l2 2M5 3 2 6M22 6l-3-3")
+    // Alarm and Stopwatch sit a little high in their box, so their round bodies look centred beside the others.
+    val Alarm = line("alarm", 1.8f, circle(12f, 12.5f, 8f), "M12 8.5v4l2 2M5 2.5 2 5.5M22 5.5l-3-3")
     val Hourglass = line("hourglass", 1.8f, "M6 2h12M6 22h12M7 2v4l5 6-5 6v4M17 2v4l-5 6 5 6v4")
-    val Stopwatch = line("stopwatch", 1.8f, circle(12f, 14f, 8f), "M12 10v4M10 2h4M19 7l1.5-1.5")
+    val Stopwatch = line("stopwatch", 1.8f, circle(12f, 12.6f, 7.6f), "M12 9v3.6M10 1.6h4M18.6 6.4l1.5-1.5")
     val Search = line("search", 2f, circle(11f, 11f, 7f), "m20 20-3.5-3.5")
     val Sliders = line("sliders", 2f, "M4 7h10M18 7h2M4 17h4M12 17h8", circle(16f, 7f, 2f), circle(10f, 17f, 2f))
     val Plus = line("plus", 2.2f, "M12 5v14M5 12h14")

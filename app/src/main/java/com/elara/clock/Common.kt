@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -90,14 +91,17 @@ fun NavBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
                 .size(TabWidth, 44.dp)
                 .background(Ink.chosen, RoundedCornerShape(22.dp)),
         )
-        Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(TabGap)) {
-            Tab.entries.forEach { tab ->
+        // Each tab placed at the same rounded offset as the pill: a Row's gap rounds on its own (2 dp is
+        // 3.5 px at 1.75x), which left later icons up to 4 px off the pill's centre.
+        Box(Modifier.width(TabStep * Tab.entries.size - TabGap).height(44.dp).selectableGroup()) {
+            Tab.entries.forEachIndexed { i, tab ->
                 val on = tab == selected
                 // Two icons crossfaded in their layers, read at draw time: animating a tint in composition
                 // rebuilt the bar on every frame of a tab switch.
                 val lit = animateFloatAsState(if (on) 1f else 0f, label = "tab icon")
                 Box(
                     Modifier
+                        .offset { IntOffset((TabStep * i).roundToPx(), 0) }
                         .size(TabWidth, 44.dp)
                         .clip(RoundedCornerShape(22.dp))
                         .selectable(selected = on, role = Role.Tab) { onSelect(tab) },
