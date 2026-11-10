@@ -13,8 +13,11 @@ One app module, Jetpack Compose, no other libraries.
 - `Places.kt`: cities (the catalog in `assets/cities.tsv` and your chosen ones in preferences), UTC
   labels, offsets between zones, sunrise and sunset (the standard sunrise equation), and where the sun
   is overhead, for the map's night side.
-- `CitySheet.kt`: the Add city sheet, a search over the catalog.
-- `WorldMap.kt`: the dotted map from a coarse hand-made land mask, drawn in one `drawPoints` call.
+- `CityMap.kt`: the full-screen city map (add, view and remove cities). The land and city dots are one
+  layer that a drag only moves; it is drawn again only when the zoom or the chosen city changes, and the
+  16 000 land dots go in one `drawRawPoints` call (a `List<Offset>` `drawPoints` records them one by one).
+- `WorldMap.kt`: the dotted map from a coarse hand-made land mask, drawn in one `drawPoints` call, and
+  `Land`, the detailed 1-degree land for the city map.
 - `Bs.kt`, `BsTable.kt`: AD to Bikram Sambat dates, copied from Elara Calendar (no shared code at
   run time).
 
