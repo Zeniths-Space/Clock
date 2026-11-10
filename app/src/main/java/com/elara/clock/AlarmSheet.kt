@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -76,7 +77,7 @@ import kotlin.math.min
 private val Week = listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.dropLast(1)
 
 /** The Elara "cookie": a circle with 8 soft lobes, behind the sheet's header icon. */
-private val Cookie = GenericShape { size, _ ->
+internal val Cookie = GenericShape { size, _ ->
     val steps = 120
     for (i in 0..steps) {
         val a = i * 2 * Math.PI / steps
@@ -193,10 +194,10 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
 private val Danger get() = if (Ink.dark) Color(0xFFFF8A8A) else Color(0xFFD93A3A)
 
 @Composable
-private fun Header(title: String, subtitle: String, onClose: () -> Unit) {
+internal fun Header(title: String, subtitle: String, onClose: () -> Unit, icon: ImageVector = Icons.Alarm) {
     Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(52.dp).clip(Cookie).background(Ink.purple.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Alarm, null, tint = Ink.accent, modifier = Modifier.size(24.dp))
+            Icon(icon, null, tint = Ink.accent, modifier = Modifier.size(24.dp))
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(title, style = sans(24, 500), modifier = Modifier.semantics { heading() })
@@ -340,7 +341,7 @@ private fun DayPicker(chosen: Set<Int>, onToggle: (Int) -> Unit) {
 }
 
 @Composable
-private fun Label(text: String) {
+internal fun Label(text: String) {
     Text(text, style = sans(15, 500, Ink.accent), modifier = Modifier.padding(start = 6.dp, top = 22.dp, bottom = 8.dp))
 }
 

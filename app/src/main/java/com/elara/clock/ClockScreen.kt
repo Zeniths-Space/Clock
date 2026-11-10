@@ -53,8 +53,9 @@ private val BigDigits = sans(164, weight = 200, spacing = -8f)
 @Composable
 fun ClockScreen(modifier: Modifier = Modifier) {
     val now by rememberNow()
-    val home = remember { Cities.home() }
-    val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
+    val context = LocalContext.current
+    val home = remember { Cities.home(context) }
+    val twentyFour = DateFormat.is24HourFormat(context)
     val here = now.atZone(home.zone)
     Column(
         modifier
@@ -229,7 +230,7 @@ private fun TileChip(text: String, bg: Color, fg: Color) {
 /** Your city large in the middle, two others each side; they spill past the screen edges, as in the design. */
 @Composable
 private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
-    val others = Cities.all.filter { it != home }
+    val others = Cities.chosen(LocalContext.current).filterNot { it.same(home) }
     val row = others.take(2) + home + others.drop(2).take(2)
     Box(Modifier.fillMaxWidth().padding(top = 22.dp), contentAlignment = Alignment.Center) {
         Row(

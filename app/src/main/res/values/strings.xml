@@ -18,11 +18,27 @@
     <string name="sunset">Set</string>
     <string name="daylight">%1$d h %2$d min of light</string>
 
-    <string name="cities_count">%1$d CITIES</string>
+    <plurals name="cities_count">
+        <item quantity="one">%1$d CITY</item>
+        <item quantity="other">%1$d CITIES</item>
+    </plurals>
+    <plurals name="cities_known">
+        <item quantity="one">%1$d city</item>
+        <item quantity="other">%1$d cities</item>
+    </plurals>
     <string name="add_city">Add city</string>
     <string name="your_cities">Your cities</string>
     <string name="around_world">around the world</string>
     <string name="map_now">Day and night now · %1$s in %2$s</string>
+    <string name="no_city_found">No city by that name. Try its country or a bigger city nearby.</string>
+    <string name="clear_search">Clear search</string>
+    <string name="added">Added</string>
+    <string name="no_cities">Only your own city so far. Tap + to add another.</string>
+    <string name="remove">Remove</string>
+    <string name="remove_city">Remove %1$s?</string>
+    <string name="remove_city_text">It will leave your world clock. You can add it again any time.</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="tomorrow">Tomorrow</string>
     <string name="same_time">Same time</string>
     <string name="ahead">%1$s ahead</string>
     <string name="behind">%1$s behind</string>

@@ -22,6 +22,10 @@ object WorldMap {
     fun x(lon: Double) = ((lon + 180) / 360).toFloat()
     fun y(lat: Double) = ((NORTH - lat) / (NORTH - SOUTH)).toFloat()
 
+    /** The longitude and latitude at [x] and [y] on the map, the inverse of [x] and [y]. */
+    fun lon(x: Float) = x * 360.0 - 180
+    fun lat(y: Float) = NORTH - y * (NORTH - SOUTH).toDouble()
+
     /** Width over height of the map. */
     const val ASPECT = 360f / (NORTH - SOUTH)
 

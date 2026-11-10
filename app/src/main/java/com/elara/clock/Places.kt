@@ -1,5 +1,10 @@
 package com.elara.clock
 
+import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -7,33 +12,87 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** A city on the clock: [code] is its short chip label; [lat] and [lon] in degrees. */
-data class City(val name: String, val country: String, val code: String, val zone: ZoneId, val lat: Double, val lon: Double)
+/** A city on the clock: [code] is its short chip label; [cc] its ISO country code; [lat] and [lon] in degrees. */
+data class City(val name: String, val cc: String, val code: String, val zone: ZoneId, val lat: Double, val lon: Double) {
+    val country: String get() = if (cc.isEmpty()) "" else Locale("", cc).displayCountry
 
-/** The cities this first version knows: shown as favourites until cities can be added. */
+    /** One tab-separated line, as in assets/cities.tsv: name, country code, zone, lat, lon, code. */
+    fun toLine() = "$name\t$cc\t${zone.id}\t$lat\t$lon\t$code"
+
+    companion object {
+        /** The city in [line], or null when it can't be read or this phone doesn't know its time zone. */
+        fun fromLine(line: String): City? = runCatching {
+            val f = line.split('\t')
+            City(f[0], f[1], f[5], ZoneId.of(f[2]), f[3].toDouble(), f[4].toDouble())
+        }.getOrNull()
+    }
+}
+
+/**
+ * Cities: every place the app knows (assets/cities.tsv, made by tools/cities.py from the tz database), and
+ * the ones you chose for the world clock, kept in preferences and read once per process.
+ */
 object Cities {
-    val Kathmandu = City("Kathmandu", "Nepal", "KTM", ZoneId.of("Asia/Kathmandu"), 27.7172, 85.3240)
-    val Delhi = City("Delhi", "India", "DEL", ZoneId.of("Asia/Kolkata"), 28.6139, 77.2090)
-    val Dubai = City("Dubai", "UAE", "DXB", ZoneId.of("Asia/Dubai"), 25.2048, 55.2708)
-    val London = City("London", "UK", "LON", ZoneId.of("Europe/London"), 51.5072, -0.1276)
-    val NewYork = City("New York", "USA", "NYC", ZoneId.of("America/New_York"), 40.7128, -74.0060)
-    val Tokyo = City("Tokyo", "Japan", "TYO", ZoneId.of("Asia/Tokyo"), 35.6762, 139.6503)
-    val all = listOf(Kathmandu, Delhi, Dubai, London, NewYork, Tokyo)
+    private val Defaults = listOf(
+        "Kathmandu\tNP\tAsia/Kathmandu\t27.7172\t85.324\tKTM",
+        "Delhi\tIN\tAsia/Kolkata\t28.6139\t77.209\tDEL",
+        "Dubai\tAE\tAsia/Dubai\t25.2048\t55.2708\tDXB",
+        "London\tGB\tEurope/London\t51.5072\t-0.1276\tLON",
+        "New York\tUS\tAmerica/New_York\t40.7128\t-74.006\tNYC",
+        "Tokyo\tJP\tAsia/Tokyo\t35.6762\t139.6503\tTYO",
+    )
+    private const val KEY = "cities"
 
-    /** The phone's own city when it is one of [all]; otherwise one named after the time zone, at its offset's longitude. */
-    fun home(zone: ZoneId = ZoneId.systemDefault()): City =
-        all.firstOrNull { it.zone.normalized() == zone.normalized() || it.zone.id == zone.id }
+    @Volatile private var catalog: List<City>? = null
+
+    /** Every city the app knows, sorted by name. Parses a 24 KB asset the first time (a few ms). */
+    fun catalog(context: Context): List<City> = catalog ?: context.assets.open("cities.tsv").bufferedReader().useLines { lines ->
+        lines.mapNotNull(City::fromLine).toList()
+    }.also { catalog = it }
+
+    private var chosen by mutableStateOf<List<City>?>(null)
+
+    /** Your cities, in the order you added them; a Compose state, so screens follow changes. */
+    fun chosen(context: Context): List<City> = chosen ?: prefs(context).getString(KEY, null)
+        .let { it?.split('\n')?.filter(String::isNotEmpty) ?: Defaults }
+        .mapNotNull(City::fromLine)
+        .also { chosen = it }
+
+    fun add(context: Context, city: City) = save(context, chosen(context).filterNot { it.same(city) } + city)
+
+    fun remove(context: Context, city: City) = save(context, chosen(context).filterNot { it.same(city) })
+
+    private fun save(context: Context, list: List<City>) {
+        chosen = list
+        prefs(context).edit { putString(KEY, list.joinToString("\n") { it.toLine() }) }
+    }
+
+    private fun prefs(context: Context) = context.getSharedPreferences("world", Context.MODE_PRIVATE)
+
+    /**
+     * The phone's own city: one of [chosen] in its time zone, else the catalog's city for that zone, else one
+     * named after the zone at its offset's longitude.
+     */
+    fun home(context: Context, zone: ZoneId = ZoneId.systemDefault()): City {
+        fun City.inZone() = this.zone.normalized() == zone.normalized() || this.zone.id == zone.id
+        return chosen(context).firstOrNull { it.inZone() }
+            ?: catalog(context).firstOrNull { it.zone.id == zone.id }
             ?: zone.id.substringAfterLast('/').replace('_', ' ').let { name ->
                 val offsetHours = zone.rules.getOffset(Instant.now()).totalSeconds / 3600.0
                 City(name, "", name.take(3).uppercase(), zone, 0.0, offsetHours * 15)
             }
+    }
 }
+
+/** Same place: same name in the same zone (coordinates may differ between the defaults and the catalog). */
+fun City.same(other: City) = name == other.name && zone.id == other.zone.id
 
 /** "UTC +5:45", "UTC −4", "UTC +0". */
 fun utcLabel(zone: ZoneId, at: Instant): String {
@@ -84,4 +143,28 @@ fun sunTimes(date: LocalDate, lat: Double, lon: Double, zone: ZoneId): Pair<Loca
     val w = acos(cosW) / rad
     fun local(jd: Double) = Instant.ofEpochMilli(((jd - 2440587.5) * 86_400_000).toLong()).atZone(zone).toLocalTime()
     return local(transit - w / 360) to local(transit + w / 360)
+}
+
+/**
+ * Where the sun is overhead at [at]: latitude and longitude in degrees, from the usual low-precision solar
+ * formulas (within about half a degree, plenty for shading a map).
+ */
+fun subsolarPoint(at: Instant): Pair<Double, Double> {
+    val rad = Math.PI / 180
+    val n = at.toEpochMilli() / 86_400_000.0 - 10957.5 // Days from J2000 (2000-01-01 12:00 UTC).
+    val l = (280.460 + 0.9856474 * n).mod(360.0)
+    val g = (357.528 + 0.9856003 * n).mod(360.0) * rad
+    val lambda = (l + 1.915 * sin(g) + 0.020 * sin(2 * g)) * rad
+    val e = 23.439 * rad
+    val decl = asin(sin(e) * sin(lambda)) / rad
+    val ra = Math.toDegrees(kotlin.math.atan2(cos(e) * sin(lambda), cos(lambda))).mod(360.0)
+    val gmst = (280.46061837 + 360.98564736629 * n).mod(360.0)
+    val lon = (ra - gmst + 540).mod(360.0) - 180
+    return decl to lon
+}
+
+/** True when the sun is above the horizon at [lat], [lon], for the sun overhead at [sun] (from [subsolarPoint]). */
+fun isDay(lat: Double, lon: Double, sun: Pair<Double, Double>): Boolean {
+    val rad = Math.PI / 180
+    return sin(lat * rad) * sin(sun.first * rad) + cos(lat * rad) * cos(sun.first * rad) * cos((lon - sun.second) * rad) > 0
 }
