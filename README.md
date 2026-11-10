@@ -43,7 +43,7 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
 - **Clock**: your city's time in huge thin digits, beside a line through your time zone on a dotted
   world map; a purple Today tile (date, ISO week, the Nepali BS date in Devanagari); a sun tile
   with sunrise, sunset and hours of daylight (computed on the phone); round chips for other cities.
-- **World clock**: a night-blue dotted map with the night side shaded where the sun is down now and
+- **World clock**: a night-blue map with solid land, the night side shaded where the sun is down now and
   every city's time in a bubble (placed so none overlap), then each city with its UTC offset, whether
   it is yesterday, today or tomorrow there, how far ahead or behind it is, and its time. The + button
   opens a full-screen city map zoomed in on your city: drag, pinch or double-tap to zoom, tap any of
@@ -57,8 +57,9 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
 
 The home city is the phone's time zone. The city list (`app/src/main/assets/cities.tsv`) is made
 offline by `tools/cities.py` from the tz database's `zone.tab`, plus large cities that share a zone;
-your chosen cities are kept in the app's preferences. The city map's land (`assets/land.bin`, one bit
-per 1-degree cell) is made by `tools/land.py` from Natural Earth's public-domain 1:50m land polygons.
+your chosen cities are kept in the app's preferences. The World page's map and the city map draw land as solid
+shapes (`assets/land.bin`), made by `tools/land.py` from Natural Earth's public-domain 1:50m land
+polygons: a coarse world, and a detailed version cut into 10-degree tiles for zooming in.
 Nothing is looked up online.
 
 ## Build
