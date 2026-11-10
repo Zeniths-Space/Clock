@@ -3,6 +3,7 @@ package com.elara.clock
 import android.os.Build
 import android.content.Intent
 import android.os.Bundle
+import android.os.Process
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -81,13 +82,20 @@ class MainActivity : ComponentActivity() {
  * sweeping. Keep it until they settle (plus a beat), then fade it (Android 12+; older versions show a still
  * splash as the window background).
  */
+/** How long the splash's hands sweep: windowSplashScreenAnimationDuration in themes.xml. */
+private const val SweepMillis = 700L
+
 private fun ComponentActivity.holdSplash() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     splashScreen.setOnExitAnimationListener { view ->
-        // The start is on the uptime clock (Android stores SystemClock.uptimeMillis() in it).
-        val start = view.iconAnimationStart?.toEpochMilli() ?: SystemClock.uptimeMillis()
-        val settled = start + (view.iconAnimationDuration?.toMillis() ?: 0L)
-        val wait = (settled - SystemClock.uptimeMillis()).coerceIn(0L, 1000L) + 150L
+        // The hands sweep for SweepMillis from when the splash appears, which is about when this process
+        // started. (A wait worked out from the splash's own iconAnimationStart held a still splash for about a
+        // second after the hands stopped on the SM-S928B, as if always at its limit.) A warm start fades at once.
+        val settled = Process.getStartUptimeMillis() + SweepMillis
+        val wait = (settled - SystemClock.uptimeMillis()).coerceIn(0L, SweepMillis) + 80L
+        // The icon is drawn on a surface of its own, which the splash's fade does not reach: fade (and shrink)
+        // it too, or it stays solid over the faded page and vanishes in one frame.
+        view.iconView?.animate()?.alpha(0f)?.scaleX(0.85f)?.scaleY(0.85f)?.setStartDelay(wait)?.setDuration(220)?.start()
         view.animate().alpha(0f).setStartDelay(wait).setDuration(250).withEndAction { view.remove() }.start()
     }
 }
