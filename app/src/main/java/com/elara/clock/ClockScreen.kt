@@ -1,6 +1,5 @@
 package com.elara.clock
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +23,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,15 +57,22 @@ import java.time.temporal.ChronoUnit
 import java.time.temporal.IsoFields
 
 /** Big thin digits for the time, hours over minutes. */
-private val BigDigits = sans(164, weight = 200, spacing = -8f)
+private val BigDigits get() = sans(164, weight = 200, spacing = -8f) // A getter: the colour follows the theme, which can change while the app runs.
 
 /** Home: the time where you are, the day (with its Nepali date), the sun, and other cities a tap away. */
 @Composable
 fun ClockScreen(modifier: Modifier = Modifier) {
     val now by rememberNow()
     val context = LocalContext.current
-    val home = remember { Cities.home(context) }
-    val twentyFour = DateFormat.is24HourFormat(context)
+    val yours = remember(Settings.get(context).homeCity) { Cities.home(context) }
+    val twentyFour = rememberTwentyFour()
+    // The city the page shows: your own unless you picked another from the menu or the chips below.
+    val cities = (listOf(yours) + Cities.chosen(context)).distinctBy { it.name + it.zone.id }
+    var shownKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val home = cities.firstOrNull { shownKey != null && it.name + "|" + it.zone.id == shownKey } ?: yours
+    val show = { city: City -> shownKey = if (city.same(yours)) null else city.name + "|" + city.zone.id }
+    var menu by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var settings by rememberSaveable { mutableStateOf(false) }
     val here = now.atZone(home.zone)
     Column(
         modifier
@@ -67,21 +82,22 @@ fun ClockScreen(modifier: Modifier = Modifier) {
             .padding(top = 6.dp, bottom = NavBarSpace),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(role = Role.Button) {}
-                    .padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(if (home.country.isEmpty()) home.name else "${home.name}, ${home.country}", style = sans(16, 500))
-                Spacer(Modifier.width(6.dp))
-                Icon(Icons.Chevron, null, tint = Ink.text, modifier = Modifier.size(16.dp))
+            var anchor by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+            Box(Modifier.weight(1f)) {
+                Row(
+                    Modifier
+                        .onGloballyPositioned { anchor = it.boundsInWindow() }
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(role = Role.DropdownList, onClickLabel = stringResource(R.string.choose_city)) { menu = anchor }
+                        .padding(vertical = 10.dp, horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(if (home.country.isEmpty()) home.name else "${home.name}, ${home.country}", style = sans(16, 500))
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Chevron, null, tint = Ink.text, modifier = Modifier.size(16.dp))
+                }
             }
-            GlassIconButton(Icons.Search, stringResource(R.string.search_cities))
-            Spacer(Modifier.width(8.dp))
-            GlassIconButton(Icons.Sliders, stringResource(R.string.settings))
+            GlassIconButton(Icons.Sliders, stringResource(R.string.settings)) { settings = true }
         }
 
         Row(Modifier.padding(top = 14.dp).height(300.dp)) {
@@ -106,7 +122,76 @@ fun ClockScreen(modifier: Modifier = Modifier) {
             SunTile(home, now, Modifier.weight(1f))
         }
 
-        CityChips(home, now, twentyFour)
+        CityChips(home, cities, now, twentyFour, show)
+    }
+    menu?.let { at ->
+        val cityMap = LocalCityMap.current
+        CityMenu(at, cities, home, yours, now, twentyFour, onPick = { show(it); menu = null }, onAdd = { menu = null; cityMap.show(null) }) { menu = null }
+    }
+    if (settings) Overlay { SettingsPage(onClose = { settings = false }) }
+}
+
+/**
+ * The city menu under the page's title, as the Elara dropdowns are: as wide as the title (at least 260 dp),
+ * 8 dp below it, rounded 24 dp, in the raised colour; the shown city filled purple with a check. Your city
+ * first, then the ones you added, then Add city. Drawn over the app, not in a popup window.
+ */
+@Composable
+private fun CityMenu(
+    at: androidx.compose.ui.geometry.Rect, cities: List<City>, shown: City, yours: City, now: Instant, twentyFour: Boolean,
+    onPick: (City) -> Unit, onAdd: () -> Unit, onDismiss: () -> Unit,
+) = Overlay {
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
+        val shape = RoundedCornerShape(24.dp)
+        Column(
+            Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(at.left.toInt(), (at.bottom + 8.dp.toPx()).toInt()) }
+                .width(with(density) { at.width.toDp() }.coerceAtLeast(260.dp))
+                .shadow(16.dp, shape, ambientColor = Ink.night.copy(alpha = 0.2f), spotColor = Ink.night.copy(alpha = 0.3f))
+                .background(if (Ink.dark) Color(0xFF1F1F1F) else Color.White, shape)
+                .clip(shape)
+                .pointerInput(Unit) {}
+                .padding(vertical = 6.dp),
+        ) {
+            cities.forEach { city ->
+                val on = city.same(shown)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (on) Ink.purple.copy(alpha = 0.22f) else Color.Transparent)
+                        .selectable(on, role = Role.RadioButton) { onPick(city) }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(city.name, style = sans(16, 500, if (on) Ink.accent else Ink.text))
+                        Text(
+                            if (city.same(yours)) stringResource(R.string.your_city) else city.country,
+                            style = sans(12, color = Ink.muted),
+                        )
+                    }
+                    Text(now.atZone(city.zone).hm(twentyFour), style = sans(15, color = if (on) Ink.accent else Ink.text))
+                    if (on) Icon(Icons.Check, null, tint = Ink.accent, modifier = Modifier.padding(start = 10.dp).size(18.dp))
+                }
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable(role = Role.Button, onClick = onAdd)
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Plus, null, tint = Ink.accent, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.add_city), style = sans(15, 500, Ink.accent))
+            }
+        }
     }
 }
 
@@ -231,10 +316,13 @@ private fun TileChip(text: String, bg: Color, fg: Color) {
     Text(text, style = sans(11, color = fg), modifier = Modifier.background(bg, RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
-/** Your city large in the middle, two others each side; they spill past the screen edges, as in the design. */
+/**
+ * The shown city large in the middle, two others each side; they spill past the screen edges, as in the
+ * design. Tapping one shows that city on the page.
+ */
 @Composable
-private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
-    val others = Cities.chosen(LocalContext.current).filterNot { it.same(home) }
+private fun CityChips(home: City, cities: List<City>, now: Instant, twentyFour: Boolean, onPick: (City) -> Unit) {
+    val others = cities.filterNot { it.same(home) }
     val row = others.take(2) + home + others.drop(2).take(2)
     Box(Modifier.fillMaxWidth().padding(top = 22.dp), contentAlignment = Alignment.Center) {
         Row(
@@ -243,7 +331,7 @@ private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             row.forEachIndexed { i, city ->
-                val active = city == home
+                val active = city.same(home)
                 val size = when {
                     active -> 92.dp
                     i == 1 || i == 3 -> 66.dp
@@ -255,7 +343,7 @@ private fun CityChips(home: City, now: Instant, twentyFour: Boolean) {
                         .size(size)
                         .glass(CircleShape, alpha = if (active) 0.85f else 0.45f, elevation = if (active) 12.dp else 6.dp)
                         .clip(CircleShape)
-                        .clickable(role = Role.Button, onClickLabel = city.name) {}
+                        .clickable(role = Role.Button, onClickLabel = city.name) { onPick(city) }
                         .semantics(mergeDescendants = true) { contentDescription = "${city.name} $time" },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
