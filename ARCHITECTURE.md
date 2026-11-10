@@ -2,8 +2,11 @@
 
 One app module, Jetpack Compose, no other libraries.
 
-- `MainActivity.kt`: the activity, splash hand-off and `ClockApp`, which swaps the five tabs and
-  floats the tab bar over them.
+- `MainActivity.kt`: the activity, splash hand-off and `ClockApp`, which stacks the five tabs, floats the
+  tab bar over them and draws the city map over both. Every tab stays composed and placed once opened
+  (the rest are built when the app is idle), so a running stopwatch or timer keeps going on another tab
+  and a switch only fades: hidden tabs sit at alpha 0, which Android skips drawing, and a fading tab goes
+  through a kept layer. `LocalTabShown` tells a tab whether it is on screen, so per-frame work stops.
 - `Theme.kt`: the colours (`Ink`, light and AMOLED dark), text styles in the system font, the glass surface, the page background and `Digits` for
   the big numbers (measured unbounded so the font's tall line box does not clip them).
 - `Common.kt`: the tab bar (its pill slides to the open tab), glass buttons, the switch, and `rememberNow()`, the time updated once a
@@ -17,6 +20,13 @@ One app module, Jetpack Compose, no other libraries.
   that a drag only moves. The land layer draws only the detailed tiles on screen (the coarse world when
   zoomed out) and is drawn again only when the zoom or the set of tiles changes: drawing the whole
   detailed coastline every frame made dragging janky (67% of frames on the S24 Ultra, against 2-3% now).
+  It is drawn in the activity's window, not a dialog (a new window cost about 100 ms per open).
+
+Smoothness at 60 Hz (S24 Ultra in Standard mode, release build, 2026-11-10): very big glyphs are drawn as
+outlines rather than from Android's glyph cache, so `Digits`, the Clock page's dotted strip and the World
+page's map card each draw into a kept layer (`CompositingStrategy.Offscreen`) and are not drawn again
+while nothing in them changes. Tab switching went from 6-7% to 2-2.5% janky frames (legacy count),
+the city map opens in about 60-75 ms instead of 165 ms.
 - `WorldMap.kt`: the dotted map from a coarse hand-made land mask (the Clock page's time-zone strip),
   drawn in one `drawPoints` call; `Land`, the solid land shapes (coarse and tiled) for the World page and
   the city map; and `nightShade`, the night side as a shape.
