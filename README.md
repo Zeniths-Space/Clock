@@ -78,6 +78,10 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
   city chosen on the map).
 - **Timer**: hours, minutes and seconds in heavy stacked rows, a half-circle preset dial
   (1 to 45 minutes) that turns to the chosen preset, Reset, Start/Pause and +1 minute.
+  Several timers can run at once: "+" (shown while one runs or waits) adds another, set up on the same
+  screen; then chips under the rows show every timer with a ring of the time left, and tapping one shows
+  it in the big rows, where the buttons control it. Each runs, notifies and rings on its own; timers only
+  being set up that aren't shown drop out.
 - **Stopwatch**: minutes, seconds and hundredths in the same rows, with laps. It keeps counting with the
   app closed and across a restart (kept in device-protected storage, like the timer), and while it runs or
   holds a time an ongoing notification shows it, counted up by Android itself, with Pause or Resume, Lap

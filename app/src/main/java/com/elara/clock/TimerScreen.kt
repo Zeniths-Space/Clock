@@ -10,7 +10,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,28 +69,34 @@ val RowDigits get() = sans(132, weight = 700, spacing = -8f)
 
 private val Presets = listOf(1, 3, 5, 10, 15, 25, 45)
 
-/** One countdown; its state, end alarm and notification live in [TimerEngine], so it runs with the app closed. */
+/**
+ * The countdowns; their state, end alarms and notifications live in [TimerEngine], so they run with the app
+ * closed. The big rows, dial and buttons show one timer; with more than one, chips under the rows show them all
+ * and pick which; "+" adds one.
+ */
 @Composable
 fun TimerScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val timer = TimerEngine.get(context)
+    val timers = TimerEngine.timers(context)
+    val timer = timers.current
     val running = timer.running
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     var tick by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    // While running: wake at each whole second left, no more often. TimerEngine ends it when its alarm goes off.
-    LaunchedEffect(timer.endsAt) {
-        while (running) {
+    // While any runs: wake at the next whole second any of them has left, no more often. TimerEngine ends each
+    // when its alarm goes off.
+    val ends = timers.list.filter { it.running }.map { it.endsAt }
+    LaunchedEffect(ends) {
+        while (ends.isNotEmpty()) {
             tick = SystemClock.elapsedRealtime()
-            val left = timer.endsAt - tick
-            if (left <= 0) break
-            delay(left % 1000 + 1)
+            val next = ends.map { it - tick }.filter { it > 0 }.minOfOrNull { it % 1000 + 1 } ?: break
+            delay(next)
         }
     }
     val shown = if (running) (timer.endsAt - tick).coerceAtLeast(0) else timer.leftMs
     val durationMs = timer.durationMs
     val total = (shown + 999) / 1000
     val now = Instant.now().atZone(ZoneId.systemDefault())
-    val ends = now.plusNanos(shown * 1_000_000)
+    val endsAt = now.plusNanos(shown * 1_000_000)
 
     Column(
         modifier
@@ -98,7 +107,9 @@ fun TimerScreen(modifier: Modifier = Modifier) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.tab_timer), style = sans(22, 500))
-                Text(stringResource(R.string.timer_ends, ends.hm(rememberTwentyFour()), clockText(durationMs / 1000)), style = smallText(11))
+                val ends = stringResource(R.string.timer_ends, endsAt.hm(rememberTwentyFour()), clockText(durationMs / 1000))
+                val name = timers.name(stringResource(R.string.tab_timer), timer.id)
+                Text(if (timers.list.size > 1) "${name.uppercase()} · $ends" else ends, style = smallText(11))
             }
             GlassIconButton(Icons.List, stringResource(R.string.timer_list))
         }
@@ -111,6 +122,25 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             StackRow((total / 3600).toString().padStart(2, '0'), stringResource(R.string.unit_h), Ink.faded)
             StackRow((total / 60 % 60).toString().padStart(2, '0'), stringResource(R.string.unit_min), Ink.purpleLight)
             StackRow((total % 60).toString().padStart(2, '0'), stringResource(R.string.unit_sec), Ink.text)
+        }
+
+        // Chips once there is more than one timer, or "+" alone while this one runs or waits.
+        if (timers.list.size > 1 || !timer.idle) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (timers.list.size > 1) {
+                    timers.list.forEach { t ->
+                        TimerChip(t, timers.name(stringResource(R.string.tab_timer), t.id), t.id == timer.id, tick) { TimerEngine.select(context, t.id) }
+                    }
+                }
+                GlassIconButton(Icons.Plus, stringResource(R.string.new_timer), size = 44.dp, iconSize = 18.dp) { TimerEngine.add(context) }
+            }
         }
 
         PresetDial(timer.minutes) { TimerEngine.choose(context, it) }
@@ -152,6 +182,39 @@ fun TimerScreen(modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center,
             ) { Text("+1m", style = smallText(12, Ink.text)) }
         }
+    }
+}
+
+/** One timer under the big rows: a ring of the time left, its name and time; the shown one filled purple at 22%. */
+@Composable
+private fun TimerChip(t: TimerState, name: String, chosen: Boolean, tick: Long, onClick: () -> Unit) {
+    val left = if (t.running) (t.endsAt - tick).coerceAtLeast(0) else t.leftMs
+    val seconds = (left + 999) / 1000
+    val time = if (seconds >= 3600) clockText(seconds) else "%02d:%02d".format(seconds / 60, seconds % 60)
+    val shape = RoundedCornerShape(22.dp)
+    Row(
+        Modifier
+            .height(44.dp)
+            .then(
+                if (chosen) Modifier.background(Ink.purple.copy(alpha = 0.22f), shape).border(1.dp, Ink.purple.copy(alpha = 0.6f), shape)
+                else Modifier.glass(shape, elevation = 4.dp),
+            )
+            .clip(shape)
+            .selectable(chosen, role = Role.Tab, onClick = onClick)
+            .padding(start = 10.dp, end = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val track = Ink.line
+        val accent = if (t.paused) Ink.muted else Ink.accent
+        val fraction = if (t.durationMs > 0) (left.toFloat() / t.durationMs).coerceIn(0f, 1f) else 0f
+        Canvas(Modifier.size(22.dp)) {
+            val w = 2.5.dp.toPx()
+            drawCircle(track, radius = size.minDimension / 2 - w / 2, style = Stroke(w))
+            drawArc(accent, -90f, 360f * fraction, false, topLeft = Offset(w / 2, w / 2), size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w), style = Stroke(w, cap = StrokeCap.Round))
+        }
+        Text(name, style = sans(14, 500))
+        Text(time, style = sans(14, color = accent))
     }
 }
 

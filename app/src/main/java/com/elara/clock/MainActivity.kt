@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun tabFor(intent: Intent?) = when {
+        // A timer's notification opens the Timer tab on that timer.
+        intent?.getIntExtra(TimerEngine.TimerId, 0)?.takeIf { it > 0 }?.also { TimerEngine.select(this, it) } != null -> Tab.TIMER
         intent?.getBooleanExtra(OpenAlarms, false) == true -> Tab.ALARMS
         intent?.getBooleanExtra(OpenTimer, false) == true -> Tab.TIMER
         intent?.getBooleanExtra(OpenStopwatch, false) == true -> Tab.STOPWATCH

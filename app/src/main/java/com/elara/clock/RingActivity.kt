@@ -67,7 +67,7 @@ class RingActivity : ComponentActivity() {
                 RingScreen(
                     alarm,
                     onSnooze = { AlarmEngine.snooze(this, alarm.id); finish() },
-                    onDismiss = { if (timer) TimerEngine.stop(this) else AlarmEngine.dismiss(this, alarm.id); finish() },
+                    onDismiss = { if (timer) TimerEngine.stop(this, intent.getIntExtra(TimerEngine.TimerId, 1)) else AlarmEngine.dismiss(this, alarm.id); finish() },
                 )
             }
         }
