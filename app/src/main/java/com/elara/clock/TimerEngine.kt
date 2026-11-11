@@ -114,7 +114,7 @@ object TimerEngine {
         // Counts up from the end, as "−00:12", so a late look shows how long ago it went off.
         val info = context.getString(R.string.timer_of, durationText(context, s.durationMs))
         val notification = Notification.Builder(context, AlarmEngine.RingChannel)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_stat_timer)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(context.getString(R.string.timer_done))
             .setContentText(info)
@@ -173,7 +173,7 @@ object TimerEngine {
         // Running: Android counts the Chronometer down by itself. Paused: the time left as plain text.
         val end = if (s.running) s.endsAt else null
         val builder = Notification.Builder(context, OngoingChannel)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_stat_timer)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(context.getString(R.string.tab_timer))
             .setContentText(info)

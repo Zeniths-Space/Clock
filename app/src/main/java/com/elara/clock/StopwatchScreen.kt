@@ -15,9 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -33,15 +32,16 @@ import androidx.compose.ui.unit.dp
 fun lapText(ms: Long) = "%02d:%02d.%02d".format(ms / 60_000, ms / 1000 % 60, ms / 10 % 100)
 
 /**
- * Minutes, seconds and hundredths in the stacked rows, laps in glass below. Kept in the app only in this
- * first version. It redraws every frame only while it runs and is on screen.
+ * Minutes, seconds and hundredths in the stacked rows, laps in glass below. Its state lives in
+ * [StopwatchEngine], so it keeps counting with the app closed. It redraws every frame only while it runs and
+ * is on screen.
  */
 @Composable
 fun StopwatchScreen(modifier: Modifier = Modifier) {
-    var startedAt by rememberSaveable { mutableLongStateOf(0L) } // elapsedRealtime minus time already run; 0 when stopped.
-    var heldMs by rememberSaveable { mutableLongStateOf(0L) }
-    val laps = remember { mutableStateListOf<Long>() }
-    val running = startedAt != 0L
+    val context = LocalContext.current
+    val watch = StopwatchEngine.get(context)
+    val laps = watch.laps
+    val running = watch.running
     var frame by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     // Every frame while running and on screen; hidden behind another tab it keeps time without drawing.
     val shown = LocalTabShown.current
@@ -49,7 +49,7 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
         if (running && shown) frame = SystemClock.elapsedRealtime()
         while (running && shown) withFrameMillis { frame = SystemClock.elapsedRealtime() }
     }
-    val ms = if (running) (frame - startedAt).coerceAtLeast(0) else heldMs
+    val ms = watch.elapsed(if (running) frame else SystemClock.elapsedRealtime())
 
     Column(
         modifier
@@ -75,17 +75,17 @@ fun StopwatchScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Lap while running; reset once stopped.
-            if (running || heldMs == 0L) {
-                GlassIconButton(Icons.Flag, stringResource(R.string.lap), size = 60.dp, iconSize = 22.dp) { if (running) laps.add(0, ms) }
+            if (running || watch.idle) {
+                GlassIconButton(Icons.Flag, stringResource(R.string.lap), size = 60.dp, iconSize = 22.dp) { StopwatchEngine.lap(context) }
             } else {
-                GlassIconButton(Icons.Reset, stringResource(R.string.reset), size = 60.dp, iconSize = 22.dp) { heldMs = 0; laps.clear() }
+                GlassIconButton(Icons.Reset, stringResource(R.string.reset), size = 60.dp, iconSize = 22.dp) { StopwatchEngine.reset(context) }
             }
             MainButton(if (running) Icons.Pause else Icons.Play, stringResource(if (running) R.string.pause else R.string.start)) {
                 if (running) {
-                    heldMs = SystemClock.elapsedRealtime() - startedAt; startedAt = 0
+                    StopwatchEngine.pause(context)
                 } else {
                     frame = SystemClock.elapsedRealtime() // Else the first frame uses an old frame time and jumps.
-                    startedAt = frame - heldMs
+                    StopwatchEngine.start(context)
                 }
             }
         }

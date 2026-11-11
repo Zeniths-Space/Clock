@@ -13,5 +13,6 @@ class ClockApplication : Application() {
         super.onCreate()
         AlarmEngine.reschedule(this)
         TimerEngine.reschedule(this)
+        StopwatchEngine.refresh(this)
     }
 }

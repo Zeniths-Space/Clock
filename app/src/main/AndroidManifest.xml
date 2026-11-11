@@ -69,6 +69,12 @@
             android:directBootAware="true"
             android:exported="false" />
 
+        <!-- The stopwatch notification's buttons: only this app's PendingIntents reach it. -->
+        <receiver
+            android:name=".StopwatchReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+
         <!-- Sets the alarms again after a restart (before and after unlock), an update, or a time change. -->
         <receiver
             android:name=".RescheduleReceiver"

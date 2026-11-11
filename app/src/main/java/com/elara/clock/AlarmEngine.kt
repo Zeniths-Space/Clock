@@ -198,7 +198,7 @@ object AlarmEngine {
         val time = alarm.time.format(HourMinute)
         val channel = Channel.entries.first { it.sound == (alarm.sound && !ownSound) && it.vibrate == alarm.vibrate }
         val builder = Notification.Builder(context, channel.id)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_stat_alarm)
             .setColor(0xFF7C4DFF.toInt())
             .setContentTitle(alarm.label.ifBlank { context.getString(R.string.alarm) })
             .setContentText(time)
@@ -284,7 +284,10 @@ class RescheduleReceiver : BroadcastReceiver() {
             Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> AlarmEngine.reschedule(context)
         }
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> TimerEngine.reschedule(context)
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                TimerEngine.reschedule(context)
+                StopwatchEngine.refresh(context)
+            }
         }
     }
 }

@@ -7,3 +7,4 @@
 3. Timer alerts and a notification while a timer runs (done). Next: several timers.
 4. World clock: search and add cities, remove them, day and night on the map (done). Next: reordering.
 5. Settings: home city, 12h/24h, theme, snooze and ring length, gradual volume, alarm sound (done).
+6. Stopwatch: keeps running with the app closed, with a notification (done).

@@ -78,7 +78,12 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
   city chosen on the map).
 - **Timer**: hours, minutes and seconds in heavy stacked rows, a half-circle preset dial
   (1 to 45 minutes) that turns to the chosen preset, Reset, Start/Pause and +1 minute.
-- **Stopwatch**: minutes, seconds and hundredths in the same rows, with laps.
+- **Stopwatch**: minutes, seconds and hundredths in the same rows, with laps. It keeps counting with the
+  app closed and across a restart (kept in device-protected storage, like the timer), and while it runs or
+  holds a time an ongoing notification shows it, counted up by Android itself, with Pause or Resume, Lap
+  and Reset.
+- Status bar icons match the tabs: an alarm clock for alarms, an hourglass for the timer, a stopwatch for
+  the stopwatch.
 
 The home city is the phone's time zone. The city list (`app/src/main/assets/cities.tsv`) is made
 offline by `tools/cities.py` from the tz database's `zone.tab`, plus large cities that share a zone;
