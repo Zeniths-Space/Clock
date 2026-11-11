@@ -15,11 +15,11 @@ import android.os.Looper
 import android.os.PowerManager
 
 /**
- * Plays an alarm whose volume rises (Settings' gradual volume): Android plays a notification's sound at one
- * volume, so for this the app plays the alarm sound itself, on the alarm volume, from quiet to full over
+ * Plays a ringing alarm's sound: its own choice or the default in Settings ([Tones]), which a notification
+ * channel can't do (it fixes one sound), on the alarm volume, and with gradual volume from quiet to full over
  * [Settings.RampSeconds]. It runs only while an alarm rings, as a foreground service showing the alarm's own
- * notification, and stops on Snooze, Dismiss, or after the ring time in Settings. Alarms without gradual
- * volume never use it: they ring through their notification as before.
+ * notification, and stops on Snooze, Dismiss, or after the ring time in Settings. If it can't start or play
+ * anything, the alarm rings through its notification with the phone's alarm sound.
  */
 class AlarmRingService : Service() {
     private var player: MediaPlayer? = null
@@ -27,6 +27,7 @@ class AlarmRingService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var started = 0L
     private var limitMillis = 0L
+    private var ramp = false
 
     private val step = object : Runnable {
         override fun run() {
@@ -36,10 +37,12 @@ class AlarmRingService : Service() {
                 AlarmEngine.timedOut(this@AlarmRingService, ringing)
                 return
             }
-            // Quadratic, so the first seconds stay soft (loudness is roughly logarithmic in volume).
-            val t = (elapsed / (Settings.RampSeconds * 1000f)).coerceIn(0f, 1f)
-            val v = 0.02f + 0.98f * t * t
-            p.setVolume(v, v)
+            if (ramp) {
+                // Quadratic, so the first seconds stay soft (loudness is roughly logarithmic in volume).
+                val t = (elapsed / (Settings.RampSeconds * 1000f)).coerceIn(0f, 1f)
+                val v = 0.02f + 0.98f * t * t
+                p.setVolume(v, v)
+            }
             handler.postDelayed(this, 500)
         }
     }
@@ -68,27 +71,35 @@ class AlarmRingService : Service() {
         ringing = id
         started = System.currentTimeMillis()
         limitMillis = Settings.get(this).ringMinutes * 60_000L
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        ramp = Settings.get(this).gradualVolume
+        val fallback = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        player = runCatching {
-            MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                setDataSource(this@AlarmRingService, uri)
-                isLooping = true
-                setWakeMode(this@AlarmRingService, PowerManager.PARTIAL_WAKE_LOCK) // Keeps the volume rising with the screen off.
-                setVolume(0.02f, 0.02f)
-                prepare()
-                start()
-            }
-        }.getOrNull()
+        // The chosen sound, else the phone's: a chosen file may be gone, or unreadable before the first unlock.
+        player = listOfNotNull(AlarmEngine.toneFor(this, id), fallback).distinct().firstNotNullOfOrNull { uri -> open(uri) }
         if (player == null) {
             // No sound could be played (a missing or broken alarm sound): ring the plain way instead.
-            AlarmEngine.ringWithoutRamp(this, id)
+            AlarmEngine.ringWithoutService(this, id)
             stopSelf()
             return
         }
         handler.post(step)
+    }
+
+    private fun open(uri: android.net.Uri): MediaPlayer? {
+        val p = MediaPlayer()
+        return runCatching {
+            p.apply {
+                setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                setDataSource(this@AlarmRingService, uri)
+                isLooping = true
+                setWakeMode(this@AlarmRingService, PowerManager.PARTIAL_WAKE_LOCK) // Keeps it playing (and rising) with the screen off.
+                val v = if (ramp) 0.02f else 1f
+                setVolume(v, v)
+                prepare()
+                start()
+            }
+        }.onFailure { p.release() }.getOrNull()
     }
 
     private fun stopPlayer() {

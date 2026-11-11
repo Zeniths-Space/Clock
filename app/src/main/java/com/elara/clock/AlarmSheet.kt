@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -101,12 +102,13 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
     var days by rememberSaveable { mutableStateOf(start.days.map { it.value }) }
     var label by rememberSaveable { mutableStateOf(start.label) }
     var sound by rememberSaveable { mutableStateOf(start.sound) }
+    var tone by rememberSaveable { mutableStateOf(start.tone) }
     var vibrate by rememberSaveable { mutableStateOf(start.vibrate) }
     var snooze by rememberSaveable { mutableStateOf(start.snooze) }
     var asking by rememberSaveable { mutableStateOf(false) }
     val draft = start.copy(
         time = LocalTime.of(hour, minute), days = days.mapTo(HashSet()) { DayOfWeek.of(it) }, label = label.trim(),
-        sound = sound, vibrate = vibrate, snooze = snooze, on = true, snoozedUntil = 0,
+        sound = sound, tone = tone, vibrate = vibrate, snooze = snooze, on = true, snoozedUntil = 0,
     )
     // Closing asks first when an edit changed something, or a new alarm has a name typed (as the Elara forms do).
     val changed = if (editing == null) label.isNotBlank() else draft != editing.copy(on = true, snoozedUntil = 0)
@@ -138,7 +140,17 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
                 NameField(label) { label = it.take(40) }
                 Label(stringResource(R.string.sound))
                 Column(Modifier.fillMaxWidth().glass(RoundedCornerShape(26.dp), elevation = 8.dp)) {
-                    SwitchRow(stringResource(R.string.sound), stringResource(if (sound) R.string.sound_default else R.string.sound_off), sound) { sound = it }
+                    SwitchRow(stringResource(R.string.sound), stringResource(if (sound) R.string.sound_on else R.string.sound_off), sound) { sound = it }
+                    if (sound) {
+                        Divider()
+                        val context = LocalContext.current
+                        val name = rememberToneTitle(Tones.forAlarm(context, tone))
+                        val pick = rememberTonePicker { tone = it }
+                        ToneRow(
+                            stringResource(R.string.alarm_sound),
+                            if (tone == null) stringResource(R.string.tone_default, name.orEmpty()) else name ?: stringResource(R.string.tone_custom),
+                        ) { pick(tone, Tones.forAlarm(context, null)) }
+                    }
                     Divider()
                     SwitchRow(stringResource(R.string.vibration), stringResource(if (vibrate) R.string.vibration_on else R.string.off), vibrate) { vibrate = it }
                     Divider()
@@ -367,6 +379,33 @@ internal fun SwitchRow(title: String, value: String, checked: Boolean, onChange:
         }
         PillSwitch(checked, onChange, title)
     }
+}
+
+/** A row that opens a choice elsewhere (Android's sound picker): its name, the current value, a chevron. */
+@Composable
+internal fun ToneRow(title: String, value: String, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = sans(16, 500))
+            Text(value, style = sans(13, color = Ink.accent), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Chevron, null, tint = Ink.muted, modifier = Modifier.size(20.dp).rotate(-90f))
+    }
+}
+
+/** [uri]'s name, read off the main thread; null while it loads or if it can't be read. */
+@Composable
+internal fun rememberToneTitle(uri: android.net.Uri?): String? {
+    val context = LocalContext.current
+    return androidx.compose.runtime.produceState<String?>(null, uri) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Tones.title(context, uri) }
+    }.value
 }
 
 @Composable

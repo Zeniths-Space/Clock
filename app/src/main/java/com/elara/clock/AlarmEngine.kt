@@ -158,10 +158,16 @@ object AlarmEngine {
         notifications(context).cancel(notificationId(id))
     }
 
-    /** The app could not play a rising sound for alarm [id]: ring through its notification instead. */
-    fun ringWithoutRamp(context: Context, id: Int) {
+    /** The app could not play alarm [id]'s sound itself: ring through its notification (the phone's alarm sound) instead. */
+    fun ringWithoutService(context: Context, id: Int) {
         load(context)
-        _alarms.value.firstOrNull { it.id == id }?.let { show(context, it, ramp = false) }
+        _alarms.value.firstOrNull { it.id == id }?.let { show(context, it, ownSound = false) }
+    }
+
+    /** The sound alarm [id] rings with: its own, else the one in Settings, else the phone's ([Tones.forAlarm]). */
+    fun toneFor(context: Context, id: Int): android.net.Uri? {
+        load(context)
+        return Tones.forAlarm(context, _alarms.value.firstOrNull { it.id == id }?.tone)
     }
 
     private fun notificationId(id: Int) = 1000 + id
@@ -169,10 +175,11 @@ object AlarmEngine {
     private fun notifications(context: Context) = context.getSystemService(NotificationManager::class.java)
 
     /**
-     * Shows the ringing notification. With gradual volume ([ramp]) the notification only vibrates and
-     * [AlarmRingService] plays the rising sound; if Android will not start it, the alarm rings the plain way.
+     * Shows the ringing notification. With a sound ([ownSound]) the notification only vibrates and
+     * [AlarmRingService] plays the alarm's chosen sound (rising, with gradual volume): a notification channel
+     * fixes one sound for every alarm. If Android will not start it, the alarm rings the plain way.
      */
-    private fun show(context: Context, alarm: Alarm, ramp: Boolean = alarm.sound && Settings.get(context).gradualVolume) {
+    private fun show(context: Context, alarm: Alarm, ownSound: Boolean = alarm.sound) {
         val manager = notifications(context)
         createChannels(context, manager)
         val full = PendingIntent.getActivity(
@@ -181,7 +188,7 @@ object AlarmEngine {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val time = alarm.time.format(HourMinute)
-        val channel = Channel.entries.first { it.sound == (alarm.sound && !ramp) && it.vibrate == alarm.vibrate }
+        val channel = Channel.entries.first { it.sound == (alarm.sound && !ownSound) && it.vibrate == alarm.vibrate }
         val builder = Notification.Builder(context, channel.id)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF7C4DFF.toInt())
@@ -199,9 +206,9 @@ object AlarmEngine {
             .addAction(Notification.Action.Builder(null, context.getString(R.string.dismiss), action(context, alarm.id, AlarmReceiver.Dismiss)).build())
             .build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT // The sound repeats until it is answered.
-        if (ramp) {
+        if (ownSound) {
             if (AlarmRingService.start(context, alarm.id, notification)) return
-            return show(context, alarm, ramp = false)
+            return show(context, alarm, ownSound = false)
         }
         manager.notify(notificationId(alarm.id), notification)
     }

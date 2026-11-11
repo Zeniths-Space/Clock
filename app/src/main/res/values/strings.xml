@@ -92,7 +92,11 @@
     <string name="edit_alarm">Edit alarm</string>
     <string name="alarm_name">Alarm name</string>
     <string name="sound">Sound</string>
-    <string name="sound_default">Default alarm sound</string>
+    <string name="sound_on">On</string>
+    <string name="alarm_sound">Alarm sound</string>
+    <string name="tone_default">Default · %1$s</string>
+    <string name="tone_phone_default">The phone\'s · %1$s</string>
+    <string name="tone_custom">Chosen sound</string>
     <string name="sound_off">Off: rings silently</string>
     <string name="vibration">Vibration</string>
     <string name="vibration_on">Basic pattern</string>

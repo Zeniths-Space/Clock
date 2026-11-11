@@ -14,7 +14,8 @@ enum class ThemeMode { PHONE, LIGHT, DARK }
 
 /**
  * The app's settings. [homeCity] is a city line (see [City.toLine]), or null to follow the phone's time zone.
- * [gradualVolume] makes an alarm start quietly and rise to full volume over [RampSeconds].
+ * [gradualVolume] makes an alarm start quietly and rise to full volume over [RampSeconds]. [alarmTone] is the
+ * sound for alarms without their own (a content URI), or null for the phone's alarm sound.
  */
 data class SettingsValues(
     val timeFormat: TimeFormat = TimeFormat.PHONE,
@@ -23,6 +24,7 @@ data class SettingsValues(
     val ringMinutes: Int = 10,
     val gradualVolume: Boolean = false,
     val homeCity: String? = null,
+    val alarmTone: String? = null,
 )
 
 /**
@@ -47,6 +49,7 @@ object Settings {
             ringMinutes = p.getInt("ring_minutes", 10).takeIf { it in RingChoices } ?: 10,
             gradualVolume = p.getBoolean("gradual_volume", false),
             homeCity = p.getString("home_city", null)?.takeIf { City.fromLine(it) != null },
+            alarmTone = p.getString("alarm_tone", null),
         )
     }.also { state.value = it }
 
@@ -60,6 +63,7 @@ object Settings {
             putInt("ring_minutes", v.ringMinutes)
             putBoolean("gradual_volume", v.gradualVolume)
             putString("home_city", v.homeCity)
+            putString("alarm_tone", v.alarmTone)
         }
     }
 

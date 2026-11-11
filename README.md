@@ -15,9 +15,11 @@ No status-bar chip: One UI does not give one to third-party apps by default, and
 - Each alarm that is on is set with Android's alarm clock (`AlarmManager.setAlarmClock`): exact,
   allowed in Doze, shown as the alarm icon in the status bar. Nothing runs between alarms.
 - When it goes off, a full-screen alarm shows over the lock screen with the time, Snooze (10 min) and
-  Dismiss. The sound is the phone's default alarm sound on the alarm volume, repeating until answered
+  Dismiss. The sound is the alarm's own, else the one in Settings, else the phone's alarm sound; the app
+  plays it itself (a notification channel can only have one sound) on the alarm volume, repeating until answered
   (it rings with the ringer on silent and through Do not disturb's alarm exception), and stops after 10
-  minutes if nobody answers. Back does not silence it.
+  minutes if nobody answers. Back does not silence it. If a chosen sound can't be played (a removed file,
+  or one that can't be read before the first unlock), it rings with the phone's alarm sound.
 - A one-time alarm turns itself off after ringing; a repeating one is set for its next day. Times are
   wall-clock times, so daylight-saving changes keep 07:00 at 07:00.
 - Alarms are set again after a restart (also before the phone is first unlocked: they are kept in
@@ -25,13 +27,16 @@ No status-bar chip: One UI does not give one to third-party apps by default, and
   process starts (One UI does not always deliver the update broadcast).
 - Adding or editing: tap + (or an alarm) for a sheet laid out like Samsung's alarm editor in the Elara form
   design: hour, minute and AM/PM wheels, the next ring date ("Tomorrow · Tue, 10 Nov"), day circles
-  (Sunday first; none chosen rings once), a name, and Sound, Vibration and Snooze switches; Delete when
+  (Sunday first; none chosen rings once), a name, and Sound, Vibration and Snooze switches, with Alarm
+  sound under Sound opening Android's sound picker; Delete when
   editing; Cancel and Save at the bottom. Its header shows how long until it rings. It does not drag;
   closing it with changes asks first. Sound off rings silently (vibration and the screen); Snooze off
   leaves only Dismiss.
 - With no alarms: a glass clock, Add alarm, and one-tap alarms for 6:00, 7:00 or a 20-minute nap.
 - The Alarms screen warns, with a Fix button, if notifications are off (alarms could not ring), if
   exact alarms are not allowed, or if full-screen alarms are not allowed.
+- Limitation: Samsung's sound picker lists ringtones, not alarm sounds, whatever the app asks for, and
+  has no way back to "Default" once a sound is chosen.
 - Limitation: like every Android app, after a force stop from App info the app gets no broadcasts until
   it is opened again, so alarms are not restored after a restart until then.
 
@@ -63,7 +68,8 @@ bottom, icons only; a dark pill (purple in dark mode) marks the open tab and sli
   Settings).
 - **Settings**: time format (phone, 12-hour, 24-hour), theme (phone, light, dark), snooze length (5 to
   20 minutes), how long an alarm rings before it stops (1 to 30 minutes), gradual volume (starts quietly,
-  full after a minute), and the home city (automatic from the phone's time zone, an added city, or any
+  full after a minute), the alarm sound for alarms without their own (Android's sound picker), and the
+  home city (automatic from the phone's time zone, an added city, or any
   city chosen on the map).
 - **Timer**: hours, minutes and seconds in heavy stacked rows, a half-circle preset dial
   (1 to 45 minutes) that turns to the chosen preset, Reset, Start/Pause and +1 minute.

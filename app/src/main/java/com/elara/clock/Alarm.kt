@@ -18,7 +18,8 @@ import java.util.Locale
 
 /**
  * One alarm. [days] empty means it rings once, then turns itself off. [sound] off rings silently (vibration
- * and the screen only); [snooze] off leaves only Dismiss. [snoozedUntil] is epoch millis while a snooze is
+ * and the screen only); [tone] is its own alarm sound (a content URI), or null for the default in Settings
+ * ([Tones]); [snooze] off leaves only Dismiss. [snoozedUntil] is epoch millis while a snooze is
  * pending, else 0; it is stored so a snooze survives a reboot.
  */
 data class Alarm(
@@ -29,6 +30,7 @@ data class Alarm(
     val on: Boolean = true,
     val vibrate: Boolean = true,
     val sound: Boolean = true,
+    val tone: String? = null,
     val snooze: Boolean = true,
     val snoozedUntil: Long = 0,
 ) {
@@ -40,6 +42,7 @@ data class Alarm(
         .put("on", on)
         .put("vibrate", vibrate)
         .put("sound", sound)
+        .put("tone", tone)
         .put("snooze", snooze)
         .put("snoozedUntil", snoozedUntil)
 
@@ -52,6 +55,7 @@ data class Alarm(
             on = o.optBoolean("on", true),
             vibrate = o.optBoolean("vibrate", true),
             sound = o.optBoolean("sound", true),
+            tone = o.optString("tone").ifEmpty { null },
             snooze = o.optBoolean("snooze", true),
             snoozedUntil = o.optLong("snoozedUntil"),
         )

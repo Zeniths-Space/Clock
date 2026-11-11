@@ -100,6 +100,13 @@ fun SettingsPage(onClose: () -> Unit) {
                     stringResource(if (s.gradualVolume) R.string.gradual_volume_on else R.string.gradual_volume_off),
                     s.gradualVolume,
                 ) { on -> set { it.copy(gradualVolume = on) } }
+                Divider()
+                val name = rememberToneTitle(Tones.forAlarm(context, null))
+                val pick = rememberTonePicker { t -> set { it.copy(alarmTone = t) } }
+                ToneRow(
+                    stringResource(R.string.alarm_sound),
+                    if (s.alarmTone == null) stringResource(R.string.tone_phone_default, name.orEmpty()) else name ?: stringResource(R.string.tone_custom),
+                ) { pick(s.alarmTone, null) }
             }
 
             Label(stringResource(R.string.home_city))
