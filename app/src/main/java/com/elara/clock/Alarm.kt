@@ -11,13 +11,15 @@ import java.time.DayOfWeek.THURSDAY
 import java.time.DayOfWeek.TUESDAY
 import java.time.DayOfWeek.WEDNESDAY
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * One alarm. [days] empty means it rings once, then turns itself off. [sound] off rings silently (vibration
+ * One alarm. [days] empty means it rings once, then turns itself off: on [date] if it has one, else at its
+ * time's next occurrence ([date] is ignored for an alarm with days). [sound] off rings silently (vibration
  * and the screen only); [tone] is its own alarm sound (a content URI), or null for the default in Settings
  * ([Tones]); [snooze] off leaves only Dismiss. [snoozedUntil] is epoch millis while a snooze is
  * pending, else 0; it is stored so a snooze survives a reboot.
@@ -27,6 +29,7 @@ data class Alarm(
     val time: LocalTime,
     val days: Set<DayOfWeek> = emptySet(),
     val label: String = "",
+    val date: LocalDate? = null,
     val on: Boolean = true,
     val vibrate: Boolean = true,
     val sound: Boolean = true,
@@ -38,6 +41,7 @@ data class Alarm(
         .put("id", id)
         .put("time", time.hour * 60 + time.minute)
         .put("days", days.sumOf { 1 shl (it.value - 1) })
+        .put("date", date?.toString())
         .put("label", label)
         .put("on", on)
         .put("vibrate", vibrate)
@@ -51,6 +55,7 @@ data class Alarm(
             id = o.getInt("id"),
             time = o.getInt("time").let { LocalTime.of(it / 60, it % 60) },
             days = o.optInt("days").let { bits -> DayOfWeek.entries.filterTo(HashSet()) { bits and (1 shl (it.value - 1)) != 0 } },
+            date = o.optString("date").takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
             label = o.optString("label"),
             on = o.optBoolean("on", true),
             vibrate = o.optBoolean("vibrate", true),
@@ -78,6 +83,8 @@ data class Alarm(
 fun nextRing(alarm: Alarm, now: ZonedDateTime): ZonedDateTime? {
     if (!alarm.on) return null
     if (alarm.snoozedUntil > now.toInstant().toEpochMilli()) return Instant.ofEpochMilli(alarm.snoozedUntil).atZone(now.zone)
+    // A one-time alarm on a date rings only then; once that has passed it has nothing left to ring.
+    if (alarm.days.isEmpty() && alarm.date != null) return alarm.date.atTime(alarm.time).atZone(now.zone).takeIf { it.isAfter(now) }
     for (d in 0..7) {
         val day = now.toLocalDate().plusDays(d.toLong())
         val at = day.atTime(alarm.time).atZone(now.zone)
@@ -85,6 +92,11 @@ fun nextRing(alarm: Alarm, now: ZonedDateTime): ZonedDateTime? {
     }
     return null
 }
+
+/** [daysLabel] of its days, or for a one-time alarm on a date, the date: "WED 18 NOV". */
+fun daysLabel(alarm: Alarm): String =
+    alarm.date?.takeIf { alarm.days.isEmpty() }?.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH))?.uppercase()
+        ?: daysLabel(alarm.days)
 
 /** "MON WED FRI", "WEEKDAYS", "WEEKENDS", "EVERY DAY", or "ONCE". */
 fun daysLabel(days: Set<DayOfWeek>): String = when {

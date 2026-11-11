@@ -100,6 +100,9 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
     var hour by rememberSaveable { mutableIntStateOf(start.time.hour) }
     var minute by rememberSaveable { mutableIntStateOf(start.time.minute) }
     var days by rememberSaveable { mutableStateOf(start.days.map { it.value }) }
+    // Epoch day of a one-time alarm's date; null for its time's next occurrence. Days and a date exclude each other.
+    var date by rememberSaveable { mutableStateOf(start.date?.takeIf { start.days.isEmpty() }?.toEpochDay()) }
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
     var label by rememberSaveable { mutableStateOf(start.label) }
     var sound by rememberSaveable { mutableStateOf(start.sound) }
     var tone by rememberSaveable { mutableStateOf(start.tone) }
@@ -107,7 +110,8 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
     var snooze by rememberSaveable { mutableStateOf(start.snooze) }
     var asking by rememberSaveable { mutableStateOf(false) }
     val draft = start.copy(
-        time = LocalTime.of(hour, minute), days = days.mapTo(HashSet()) { DayOfWeek.of(it) }, label = label.trim(),
+        time = LocalTime.of(hour, minute), days = days.mapTo(HashSet()) { DayOfWeek.of(it) },
+        date = date?.takeIf { days.isEmpty() }?.let(java.time.LocalDate::ofEpochDay), label = label.trim(),
         sound = sound, tone = tone, vibrate = vibrate, snooze = snooze, on = true, snoozedUntil = 0,
     )
     // Closing asks first when an edit changed something, or a new alarm has a name typed (as the Elara forms do).
@@ -132,9 +136,31 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
                 TimeWheels(hour, minute, twentyFour) { h, m -> hour = h; minute = m }
                 Spacer(Modifier.height(8.dp))
                 Column(Modifier.fillMaxWidth().glass(RoundedCornerShape(28.dp), elevation = 10.dp).padding(18.dp)) {
-                    Text(whenText(draft, at), style = sans(14, 500, Ink.accent))
+                    // The next ring date, BS date under it; tapping it picks a date for a one-time alarm.
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.pick_date)) { pickingDate = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            if (at == null) {
+                                Text(stringResource(R.string.alarm_time_passed), style = sans(14, 500, Danger))
+                            } else {
+                                Text(whenText(draft, at), style = sans(14, 500, Ink.accent))
+                                Bs.fromAd(at.toLocalDate())?.let { bs ->
+                                    Text("${Bs.monthName(bs.month, true)} ${Bs.digits(bs.day)}, ${Bs.digits(bs.year)}", style = sans(12, color = Ink.muted))
+                                }
+                            }
+                        }
+                        Icon(Icons.Calendar, null, tint = Ink.accent, modifier = Modifier.size(20.dp))
+                    }
                     Spacer(Modifier.height(14.dp))
-                    DayPicker(days.toSet()) { d -> days = if (d in days) days - d else days + d }
+                    DayPicker(days.toSet()) { d ->
+                        days = if (d in days) days - d else days + d
+                        if (days.isNotEmpty()) date = null
+                    }
                 }
                 Label(stringResource(R.string.alarm_name))
                 NameField(label) { label = it.take(40) }
@@ -177,8 +203,49 @@ fun AlarmSheet(editing: Alarm?, twentyFour: Boolean, onSave: (Alarm) -> Unit, on
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PillButton(stringResource(R.string.cancel), primary = false, Modifier.weight(1f), onClick = close)
-                PillButton(stringResource(R.string.save), primary = true, Modifier.weight(1f)) { onSave(draft) }
+                // A one-time alarm whose date and time have passed would never ring: not saved until it is moved.
+                PillButton(stringResource(R.string.save), primary = true, Modifier.weight(1f), enabled = at != null) { onSave(draft) }
             }
+        }
+    }
+    if (pickingDate) {
+        val zone = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now(zone)
+        // The picker works in UTC midnights.
+        fun millis(d: java.time.LocalDate) = d.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        // Weeks start on Sunday, as the day circles above (and Nepal's calendar) do.
+        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+        val state = remember {
+            androidx.compose.material3.DatePickerState(
+                locale = java.util.Locale.Builder().setLocale(locale).setUnicodeLocaleKeyword("fw", "sun").build(),
+                initialSelectedDateMillis = millis(at?.toLocalDate() ?: today),
+                selectableDates = object : androidx.compose.material3.SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis >= millis(today)
+                    override fun isSelectableYear(year: Int) = year >= today.year
+                },
+            )
+        }
+        val raised = if (Ink.dark) Color(0xFF1F1F1F) else Color.White
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { pickingDate = false },
+            colors = androidx.compose.material3.DatePickerDefaults.colors(containerColor = raised),
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { date = it / 86_400_000L; days = emptyList() }
+                    pickingDate = false
+                }) { Text(stringResource(R.string.ok), style = sans(15, 500, Ink.accent)) }
+            },
+            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text(stringResource(R.string.cancel), style = sans(15, 500, Ink.accent)) } },
+        ) {
+            androidx.compose.material3.DatePicker(
+                state,
+                colors = androidx.compose.material3.DatePickerDefaults.colors(
+                    containerColor = raised,
+                    selectedDayContainerColor = Ink.purple,
+                    todayDateBorderColor = Ink.purple,
+                    todayContentColor = Ink.accent,
+                ),
+            )
         }
     }
     if (asking) {
@@ -218,7 +285,8 @@ private fun whenText(alarm: Alarm, at: ZonedDateTime?): String {
     return when {
         alarm.days.isNotEmpty() -> stringResource(R.string.every_days, daysLabel(alarm.days).lowercase().replaceFirstChar { it.uppercase() }, date)
         at.toLocalDate() == today -> stringResource(R.string.today_on, date)
-        else -> stringResource(R.string.tomorrow_on, date)
+        at.toLocalDate() == today.plusDays(1) -> stringResource(R.string.tomorrow_on, date)
+        else -> date
     }
 }
 
@@ -414,14 +482,15 @@ internal fun Divider() {
 }
 
 @Composable
-internal fun PillButton(text: String, primary: Boolean, modifier: Modifier, onClick: () -> Unit) {
+internal fun PillButton(text: String, primary: Boolean, modifier: Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val shape = RoundedCornerShape(32.dp)
     Box(
         modifier
             .height(56.dp)
-            .then(if (primary) Modifier.background(PurpleRamp, shape) else Modifier.glass(shape, elevation = 6.dp))
+            // Not valid: greyed, as the Elara forms' Save is.
+            .then(if (primary && enabled) Modifier.background(PurpleRamp, shape) else Modifier.glass(shape, elevation = 6.dp))
             .clip(shape)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, style = sans(17, 500, if (primary) Color.White else Ink.text)) }
+    ) { Text(text, style = sans(17, 500, if (!enabled) Ink.muted else if (primary) Color.White else Ink.text)) }
 }

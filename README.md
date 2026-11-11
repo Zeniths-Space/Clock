@@ -20,6 +20,11 @@ No status-bar chip: One UI does not give one to third-party apps by default, and
   (it rings with the ringer on silent and through Do not disturb's alarm exception), and stops after 10
   minutes if nobody answers. Back does not silence it. If a chosen sound can't be played (a removed file,
   or one that can't be read before the first unlock), it rings with the phone's alarm sound.
+- A one-time alarm can be set for a date: tap the next-ring line in its sheet (the date in purple with
+  the BS date under it) for a date picker, weeks starting on Sunday, past days greyed. Choosing days
+  clears the date, and a date clears the days. A date and time already past can't be saved (Save greys
+  out and says why); turning a past dated alarm back on drops its date, so it rings next at its time.
+  The alarm list shows the date ("WED 18 NOV") in place of ONCE.
 - A one-time alarm turns itself off after ringing; a repeating one is set for its next day. Times are
   wall-clock times, so daylight-saving changes keep 07:00 at 07:00.
 - Alarms are set again after a restart (also before the phone is first unlocked: they are kept in

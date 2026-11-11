@@ -43,6 +43,20 @@ class ClockLogicTest {
         assertEquals(ZonedDateTime.of(2026, 11, 11, 6, 30, 0, 0, ktm), nextRing(alarm, now))
     }
 
+    @Test fun oneTimeAlarmOnADate() {
+        val now = ZonedDateTime.of(2026, 11, 11, 21, 0, 0, 0, ktm)
+        val alarm = Alarm(1, LocalTime.of(7, 0), date = LocalDate.of(2026, 11, 18))
+        assertEquals(ZonedDateTime.of(2026, 11, 18, 7, 0, 0, 0, ktm), nextRing(alarm, now))
+        // Passed: nothing left to ring.
+        assertNull(nextRing(alarm.copy(date = LocalDate.of(2026, 11, 11)), now))
+        // Days win over a date.
+        assertEquals(
+            ZonedDateTime.of(2026, 11, 12, 7, 0, 0, 0, ktm),
+            nextRing(alarm.copy(days = setOf(java.time.DayOfWeek.THURSDAY)), now),
+        )
+        assertEquals("WED 18 NOV", daysLabel(alarm))
+    }
+
     @Test fun nextRingLaterToday() {
         val alarm = Alarm(2, LocalTime.of(21, 0), DayOfWeek.entries.toSet(), "Medicine")
         val now = ZonedDateTime.of(2026, 11, 9, 20, 0, 0, 0, ktm)

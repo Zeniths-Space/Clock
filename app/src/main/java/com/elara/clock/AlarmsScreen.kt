@@ -402,7 +402,7 @@ private fun AlarmTile(alarm: Alarm, hero: Boolean, twentyFour: Boolean, modifier
             if (!twentyFour) Text(if (alarm.time.hour < 12) "am" else "pm", style = sans(13, 500, fg.copy(alpha = 0.7f)), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         }
         Text(
-            daysLabel(alarm.days),
+            daysLabel(alarm),
             style = smallText(10, if (hero) Color.White else Ink.chipFg),
             modifier = Modifier
                 .background(if (hero) Color.White.copy(alpha = 0.22f) else Ink.chipBg, RoundedCornerShape(8.dp))

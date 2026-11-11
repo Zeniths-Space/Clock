@@ -126,6 +126,9 @@
     <string name="fix">Fix</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="pick_date">Pick a date</string>
+    <string name="alarm_time_passed">That time has passed: pick a later date or time</string>
 
     <string name="timer_list">Timers</string>
     <string name="timer_ends">ENDS %1$s · OF %2$s</string>

@@ -90,7 +90,15 @@ object AlarmEngine {
         update(context) { list -> list.filter { it.id != id } }
     }
 
-    fun setOn(context: Context, id: Int, on: Boolean) = update(context) { list -> list.map { if (it.id == id) it.copy(on = on, snoozedUntil = 0) else it } }
+    /** Turns an alarm on or off. Turned on after its date has passed, a one-time alarm drops the date and rings next at its time. */
+    fun setOn(context: Context, id: Int, on: Boolean) = update(context) { list ->
+        val now = ZonedDateTime.now()
+        list.map { a ->
+            if (a.id != id) return@map a
+            val date = a.date?.takeIf { !on || it.atTime(a.time).atZone(now.zone).isAfter(now) }
+            a.copy(on = on, snoozedUntil = 0, date = date)
+        }
+    }
 
     /** Sets every alarm again: after a reboot, an app update, or a time or time-zone change. */
     fun reschedule(context: Context) {

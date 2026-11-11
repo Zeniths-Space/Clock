@@ -10,6 +10,7 @@ class AlarmJsonTest {
         val alarms = listOf(
             Alarm(1, LocalTime.of(6, 30), setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY), "Gym", on = true, vibrate = false, tone = "content://media/internal/audio/media/42", snoozedUntil = 123L),
             Alarm(2, LocalTime.of(23, 59), label = "Tab\tand \"quotes\"", sound = false, snooze = false),
+            Alarm(3, LocalTime.of(7, 0), date = java.time.LocalDate.of(2026, 12, 31)),
         )
         assertEquals(alarms, Alarm.listFromJson(Alarm.listToJson(alarms)))
     }
