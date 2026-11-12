@@ -112,6 +112,23 @@ Debug builds install as `com.elara.clock.dev`, beside a release build. Release b
 when the Gradle property `elaraClockSigning` points to a `keystore.properties` file
 (storeFile, storePassword, keyAlias, keyPassword) outside this repository.
 
+### Publishing a release
+
+`.github/workflows/release.yml` runs when a tag `clock-v<versionName>` is pushed (for example
+`clock-v1.0.0`). It checks the app ID and that the tag matches `versionName`, runs the unit tests and
+lint, builds the signed release, and publishes it as a GitHub release with the APK and its SHA-256
+checksum. It needs four repository secrets:
+
+| Secret | Value |
+|---|---|
+| `CLOCK_KEYSTORE_BASE64` | The keystore file, base64-encoded (`base64 -w0 release.jks`) |
+| `CLOCK_STORE_PASSWORD` | The keystore's password |
+| `CLOCK_KEY_ALIAS` | The key's alias |
+| `CLOCK_KEY_PASSWORD` | The key's password |
+
+Use the same key as your local release builds (its fingerprint is in [SECURITY.md](SECURITY.md)), or
+phones with the app installed can't update.
+
 The app icon is generated: edit and run `python3 tools/icon.py`. It is a clock face filling the icon,
 hands at ten past ten; it does not change with the time.
 
@@ -119,3 +136,8 @@ hands at ten past ten; it does not change with the time.
 
 [ARCHITECTURE.md](ARCHITECTURE.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md),
 [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Apache License 2.0; see [LICENSE](LICENSE). The bundled city list comes from the tz database's
+`zone.tab` and the land shapes from Natural Earth; both are in the public domain.

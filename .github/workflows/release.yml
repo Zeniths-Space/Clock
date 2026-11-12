@@ -1,0 +1,64 @@
+name: Release
+
+# Push a tag such as clock-v1.0.0 to build, sign and publish that version.
+on:
+  push:
+    tags: ["clock-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Check the app ID and that the tag matches versionName
+        run: |
+          grep -q 'applicationId = "com.elara.clock"' app/build.gradle.kts \
+            || { echo "applicationId is not com.elara.clock"; exit 1; }
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          [ "clock-v$version" = "$GITHUB_REF_NAME" ] \
+            || { echo "Tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Unit tests and lint
+        run: ./gradlew testDebugUnitTest lintRelease
+
+      - name: Build the signed release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CLOCK_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.CLOCK_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CLOCK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CLOCK_KEY_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "Signing secrets are not set"; exit 1; }
+          dir="$RUNNER_TEMP/signing"
+          mkdir -p "$dir"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$dir/release.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$dir/release.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > "$dir/keystore.properties"
+          ./gradlew assembleRelease -PelaraClockSigning="$dir/keystore.properties"
+          rm -rf "$dir"
+
+      - name: Name the APK and write its checksum
+        run: |
+          apk="elara-clock-$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          cat "$apk.sha256"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "elara-clock-$VERSION.apk" "elara-clock-$VERSION.apk.sha256" \
+            --title "Elara Clock $VERSION" --generate-notes --verify-tag
