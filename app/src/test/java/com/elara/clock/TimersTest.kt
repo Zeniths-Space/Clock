@@ -29,4 +29,11 @@ class TimersTest {
         assertEquals("Timer", Timers(listOf(running)).name("Timer", 1))
         assertEquals("Timer 2", Timers(listOf(running, paused)).name("Timer", 2))
     }
+
+    @Test fun aGivenNameWins() {
+        val t = Timers(listOf(running, paused.copy(label = "Pasta")))
+        assertEquals("Pasta", t.name("Timer", 2))
+        assertEquals("Timer 1", t.name("Timer", 1))
+        assertEquals("Tea", Timers(listOf(running.copy(label = "Tea"))).name("Timer", 1))
+    }
 }

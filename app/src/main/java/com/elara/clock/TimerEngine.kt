@@ -18,7 +18,7 @@ import androidx.core.content.edit
 /**
  * One countdown, [id] its own. [endsAt] is the [SystemClock.elapsedRealtime] it ends at while running, 0
  * otherwise; [leftMs] is what is left while paused. [paused] marks a timer that was started and is waiting to
- * go on.
+ * go on. [label] is the name the user gave it; blank uses its place ([Timers.name]).
  */
 data class TimerState(
     val id: Int = 1,
@@ -27,6 +27,7 @@ data class TimerState(
     val leftMs: Long = 10 * 60_000L,
     val endsAt: Long = 0,
     val paused: Boolean = false,
+    val label: String = "",
 ) {
     val running get() = endsAt != 0L
 
@@ -40,8 +41,9 @@ data class TimerState(
 data class Timers(val list: List<TimerState> = listOf(TimerState()), val selected: Int = 1) {
     val current get() = list.firstOrNull { it.id == selected } ?: list.first()
 
-    /** "Timer" with one timer, else "Timer 2": its place in the list. */
-    fun name(base: String, id: Int) = if (list.size <= 1) base else "$base ${list.indexOfFirst { it.id == id } + 1}"
+    /** The name the user gave it, else "Timer" with one timer, else "Timer 2": its place in the list. */
+    fun name(base: String, id: Int) = list.firstOrNull { it.id == id }?.label?.takeIf { it.isNotBlank() }
+        ?: if (list.size <= 1) base else "$base ${list.indexOfFirst { it.id == id } + 1}"
 
     /** Only timers that run or wait paused, and the shown one; never none. */
     fun prune(): Timers {
@@ -88,7 +90,7 @@ object TimerEngine {
                 val a = org.json.JSONArray(text)
                 (0 until a.length()).map { i ->
                     val o = a.getJSONObject(i)
-                    TimerState(o.getInt("id"), o.getInt("minutes"), o.getLong("duration"), o.getLong("left"), o.getLong("ends_at"), o.optBoolean("paused")) to o.optLong("ends_wall")
+                    TimerState(o.getInt("id"), o.getInt("minutes"), o.getLong("duration"), o.getLong("left"), o.getLong("ends_at"), o.optBoolean("paused"), o.optString("label")) to o.optLong("ends_wall")
                 }
             }.getOrNull()
         } ?: listOf(
@@ -121,7 +123,7 @@ object TimerEngine {
             t.list.forEach { s ->
                 a.put(
                     org.json.JSONObject().put("id", s.id).put("minutes", s.minutes).put("duration", s.durationMs).put("left", s.leftMs)
-                        .put("ends_at", s.endsAt).put("ends_wall", System.currentTimeMillis() + s.left()).put("paused", s.paused),
+                        .put("ends_at", s.endsAt).put("ends_wall", System.currentTimeMillis() + s.left()).put("paused", s.paused).put("label", s.label),
                 )
             }
             putString("timers", a.toString())
@@ -145,12 +147,15 @@ object TimerEngine {
 
     fun reset(context: Context, id: Int = shown(context)) = change(context, id) { it.copy(leftMs = it.durationMs, endsAt = 0, paused = false) }
 
-    fun choose(context: Context, minutes: Int) = change(context, shown(context)) { TimerState(it.id, minutes, minutes * 60_000L, minutes * 60_000L) }
+    fun choose(context: Context, minutes: Int) = change(context, shown(context)) { TimerState(it.id, minutes, minutes * 60_000L, minutes * 60_000L, label = it.label) }
 
     fun addMinute(context: Context, id: Int = shown(context)) = change(context, id) {
         if (it.running) it.copy(endsAt = it.endsAt + 60_000, durationMs = it.durationMs + 60_000)
         else it.copy(leftMs = it.leftMs + 60_000, durationMs = it.durationMs + 60_000)
     }
+
+    /** Names timer [id]; blank goes back to its place ("Timer 2"). */
+    fun rename(context: Context, id: Int, label: String) = change(context, id) { it.copy(label = label.trim()) }
 
     /** Shows timer [id] on the screen; a timer only being set up that is left drops out. */
     fun select(context: Context, id: Int) = update(context) { it.copy(selected = id).prune() }
@@ -175,7 +180,9 @@ object TimerEngine {
         AlarmEngine.createChannels(context, manager)
         val full = PendingIntent.getActivity(
             context, ringId(id),
-            Intent(context, RingActivity::class.java).putExtra(RingActivity.Timer, true).putExtra(TimerId, id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
+            Intent(context, RingActivity::class.java).putExtra(RingActivity.Timer, true).putExtra(TimerId, id)
+                .putExtra(RingActivity.Label, if (title == context.getString(R.string.tab_timer)) null else title)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         // Counts up from the end, as "−00:12", so a late look shows how long ago it went off.

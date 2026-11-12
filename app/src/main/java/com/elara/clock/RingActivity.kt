@@ -49,7 +49,7 @@ class RingActivity : ComponentActivity() {
         val timer = intent.getBooleanExtra(Timer, false)
         val id = intent.getIntExtra(AlarmId, -1)
         // The timer rings as an alarm without snooze; Stop silences it.
-        val alarm = if (timer) Alarm(id = -1, time = java.time.LocalTime.MIDNIGHT, label = getString(R.string.timer_done), snooze = false)
+        val alarm = if (timer) Alarm(id = -1, time = java.time.LocalTime.MIDNIGHT, label = listOfNotNull(intent.getStringExtra(Label), getString(R.string.timer_done)).joinToString(" · "), snooze = false)
         else AlarmEngine.alarms(this).value.firstOrNull { it.id == id } ?: return finish()
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
@@ -76,6 +76,7 @@ class RingActivity : ComponentActivity() {
     companion object {
         const val AlarmId = "com.elara.clock.ALARM_ID"
         const val Timer = "com.elara.clock.TIMER"
+        const val Label = "com.elara.clock.TIMER_LABEL"
     }
 }
 

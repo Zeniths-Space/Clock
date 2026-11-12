@@ -13,7 +13,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,12 +32,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,7 +52,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.layout
@@ -54,7 +63,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -98,6 +110,9 @@ fun TimerScreen(modifier: Modifier = Modifier) {
     val now = Instant.now().atZone(ZoneId.systemDefault())
     val endsAt = now.plusNanos(shown * 1_000_000)
 
+    var renaming by remember { mutableStateOf<Int?>(null) }
+    val base = stringResource(R.string.tab_timer)
+
     Column(
         modifier
             .fillMaxSize()
@@ -105,11 +120,20 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             .padding(top = 6.dp, bottom = NavBarSpace),
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.tab_timer), style = sans(22, 500))
+            // Tapping the title renames the shown timer.
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.rename_timer)) { renaming = timer.id },
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(base, style = sans(22, 500))
+                    Icon(Icons.Pencil, null, tint = Ink.muted, modifier = Modifier.padding(start = 8.dp).size(15.dp))
+                }
                 val ends = stringResource(R.string.timer_ends, endsAt.hm(rememberTwentyFour()), clockText(durationMs / 1000))
-                val name = timers.name(stringResource(R.string.tab_timer), timer.id)
-                Text(if (timers.list.size > 1) "${name.uppercase()} · $ends" else ends, style = smallText(11))
+                val name = timers.name(base, timer.id)
+                Text(if (name != base) "${name.uppercase()} · $ends" else ends, style = smallText(11))
             }
             GlassIconButton(Icons.List, stringResource(R.string.timer_list))
         }
@@ -136,7 +160,7 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             ) {
                 if (timers.list.size > 1) {
                     timers.list.forEach { t ->
-                        TimerChip(t, timers.name(stringResource(R.string.tab_timer), t.id), t.id == timer.id, tick) { TimerEngine.select(context, t.id) }
+                        TimerChip(t, timers.name(base, t.id), t.id == timer.id, tick, onRename = { renaming = t.id }) { TimerEngine.select(context, t.id) }
                     }
                 }
                 GlassIconButton(Icons.Plus, stringResource(R.string.new_timer), size = 44.dp, iconSize = 18.dp) { TimerEngine.add(context) }
@@ -183,11 +207,52 @@ fun TimerScreen(modifier: Modifier = Modifier) {
             ) { Text("+1m", style = smallText(12, Ink.text)) }
         }
     }
+
+    renaming?.let { id ->
+        val t = timers.list.firstOrNull { it.id == id }
+        if (t == null) renaming = null
+        else RenameDialog(t.label, onDismiss = { renaming = null }) { TimerEngine.rename(context, id, it); renaming = null }
+    }
+}
+
+/** Names a timer; an empty name goes back to "Timer 2". */
+@Composable
+private fun RenameDialog(current: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    val hint = stringResource(R.string.timer_name)
+    val focus = remember { FocusRequester() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = if (Ink.dark) Color(0xFF1F1F1F) else Color.White,
+        title = { Text(stringResource(R.string.rename_timer), style = sans(20, 500)) },
+        text = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(if (Ink.dark) Color(0xFF141414) else Color(0xFFF2F0F7), RoundedCornerShape(26.dp))
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            ) {
+                if (text.isEmpty()) Text(hint, style = sans(16, color = Ink.muted))
+                BasicTextField(
+                    text, { text = it.take(24) },
+                    singleLine = true,
+                    textStyle = sans(16),
+                    cursorBrush = SolidColor(Ink.purple),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onSave(text) }),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = hint },
+                )
+            }
+            LaunchedEffect(Unit) { focus.requestFocus() }
+        },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.save), style = sans(15, 500, Ink.accent)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), style = sans(15, 500, Ink.muted)) } },
+    )
 }
 
 /** One timer under the big rows: a ring of the time left, its name and time; the shown one filled purple at 22%. */
 @Composable
-private fun TimerChip(t: TimerState, name: String, chosen: Boolean, tick: Long, onClick: () -> Unit) {
+private fun TimerChip(t: TimerState, name: String, chosen: Boolean, tick: Long, onRename: () -> Unit, onClick: () -> Unit) {
     val left = if (t.running) (t.endsAt - tick).coerceAtLeast(0) else t.leftMs
     val seconds = (left + 999) / 1000
     val time = if (seconds >= 3600) clockText(seconds) else "%02d:%02d".format(seconds / 60, seconds % 60)
@@ -200,7 +265,9 @@ private fun TimerChip(t: TimerState, name: String, chosen: Boolean, tick: Long, 
                 else Modifier.glass(shape, elevation = 4.dp),
             )
             .clip(shape)
-            .selectable(chosen, role = Role.Tab, onClick = onClick)
+            .semantics { selected = chosen }
+            // Long press renames it.
+            .combinedClickable(role = Role.Tab, onLongClickLabel = stringResource(R.string.rename_timer), onLongClick = onRename, onClick = onClick)
             .padding(start = 10.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

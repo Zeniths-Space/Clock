@@ -139,6 +139,8 @@
     <string name="timer_done">Time\'s up</string>
     <string name="timer_paused">Paused</string>
     <string name="new_timer">New timer</string>
+    <string name="rename_timer">Rename timer</string>
+    <string name="timer_name">Name, like Pasta</string>
     <string name="timer_of">%1$s timer</string>
     <string name="restart">Restart</string>
     <string name="add_minute_short">+1 min</string>
